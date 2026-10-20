@@ -2,7 +2,7 @@
 
 [![Checks](https://github.com/BrandenXia/godfield-expose/actions/workflows/ci.yml/badge.svg)](https://github.com/BrandenXia/godfield-expose/actions/workflows/ci.yml)
 
-A Chrome/Edge Manifest V3 extension that displays player inventories present in the God Field room snapshots your tab already receives. It shows a God Field-style grid of original item images, translated names and stats, model IDs, fake-item display IDs, and unavailable/concealed items.
+A Chrome/Edge Manifest V3 extension and Tampermonkey userscript that display player inventories present in the God Field room snapshots your tab already receives. They show a God Field-style grid of original item images, translated names and stats, model IDs, fake-item display IDs, and unavailable/concealed items.
 
 **Verified:** in a controlled private match, two separate test clients received identical full nine-item hands for both players. Training mode also exposed the opposing bot's hand. Ranked duels were not tested.
 
@@ -11,6 +11,10 @@ The current public client deserializes `room.game.players[].items[]` from a shar
 <img src="docs/images/preview-ja.png" alt="Room Inspector showing a nine-item hand with original artwork and Japanese item names" width="400">
 
 ## Install
+
+Choose either the extension or the userscript for a tab.
+
+### Chrome/Edge extension
 
 Download the extension ZIP from [Releases](https://github.com/BrandenXia/godfield-expose/releases/latest) and extract it, or clone this repository.
 
@@ -23,6 +27,18 @@ Download the extension ZIP from [Releases](https://github.com/BrandenXia/godfiel
 **Updating an existing install:** replace the extracted extension files (or keep using this repository's `extension` folder), click **Reload** on the extension card, then reload God Field.
 
 No build, npm install, account permissions, or background service is required. The extension runs only on `https://godfield.net/*`. For ZIP installation, extract the release ZIP and load the extracted folder containing `manifest.json`.
+
+### Tampermonkey userscript
+
+1. Install [Tampermonkey](https://www.tampermonkey.net/) for your browser.
+2. On Chrome 138+, open Tampermonkey's extension details and enable **Allow User Scripts**. On older Chrome or Edge versions that use it, enable **Developer mode** on the browser's extensions page. Follow Tampermonkey's [userscript permission instructions](https://www.tampermonkey.net/faq.php?q=Q209) if the browser requests additional permission.
+3. In Tampermonkey's **Dashboard → Settings**, set **Config mode** to **Advanced**, then set **Content Script API** to **UserScripts API Dynamic** and save. This enables the early execution needed to intercept the game's first room subscription. Tampermonkey's [Content Script API documentation](https://www.tampermonkey.net/documentation.php?q=content_script_api) explains which modes support `document-start`.
+4. Open [godfield-room-inspector.user.js](https://raw.githubusercontent.com/BrandenXia/godfield-expose/main/userscript/godfield-room-inspector.user.js) and choose **Install** in Tampermonkey. If the link opens as text, create a new script in Tampermonkey, replace its contents with that file, and save.
+5. Open or **reload** [godfield.net](https://godfield.net/) and enter a game. The same **Room Inspector** panel appears at the lower right.
+
+The userscript is self-contained, runs only on `https://godfield.net/*`, and needs no build or remote script dependencies. It requests `document-start`, page-context execution (`@sandbox raw`), and no privileged userscript APIs (`@grant none`). The hook must run in the game's JavaScript context before its room listener starts; if the panel stays at “Game hook not ready,” check the settings above and reload. A browser or site policy that prevents page-context execution can prevent the hook from working.
+
+**Updating an existing install:** reopen the userscript link and confirm the update in Tampermonkey, then reload God Field.
 
 ## Item languages and artwork
 
@@ -50,6 +66,8 @@ All players are shown, including you. Player IDs are game-local indices; the ext
 
 `hook.js` observes the existing Firebase room listener in the page's MAIN world. `snapshot.js` copies only the required game fields. The isolated `panel.js` renders these fields in a shadow DOM panel. The extension makes no extra database requests, modifies no game data, and has no telemetry or automatic storage. Bundled catalogs supply 296 item names in eight languages without additional catalog requests. `locale-hook.js` observes successful game catalog fetches without reading response bodies or changing the returned promise. Original item images load from God Field as needed; the extension never sends inventory snapshots to another service.
 
+The userscript bundles the same source files and catalogs into one file. Its hook and shadow DOM panel both run in the page's MAIN world; the extension retains its isolated panel.
+
 The hook depends on the public `window.firebase` bridge and current room schema. It is not compatible with native mobile apps. If the panel stays at “Game hook not ready,” enable the extension before reloading. If it reports an unrecognized format, the site's schema may have changed. If opponents show unknown items, their real IDs were not received; this is not an installation error.
 
 ## Development
@@ -72,19 +90,38 @@ npm run test:browser
 
 The browser test loads the unpacked extension into a temporary Chromium profile and deletes that profile afterward. It checks both JavaScript worlds, UI behavior, and exports. Screenshots are in `test-results/inspector.png` and `test-results/inspector-mobile.png`. It also checks all eight languages, automatic locale changes, manual overrides, successful image loading, and broken-image fallback.
 
-Create an installable ZIP with Python 3:
+Run the same browser checks against the generated userscript, or run the extension and userscript suites in sequence:
+
+```sh
+npm run test:browser:userscript
+npm run test:browser:all
+```
+
+The userscript checks inject the generated file into the page before the fixture's first script runs. They verify the payload's page-context behavior; they do not install Tampermonkey or validate its permissions and injection settings. Userscript screenshots are in `test-results/inspector-userscript.png` and `test-results/inspector-mobile-userscript.png`.
+
+After changing shared files in `extension/`, regenerate the committed userscript with Python 3:
+
+```sh
+npm run build:userscript
+npm run check:userscript
+```
+
+The check fails if `userscript/godfield-room-inspector.user.js` differs from the generated output. Edit the shared sources rather than the generated file.
+
+Create an installable ZIP and userscript with Python 3:
 
 ```sh
 npm run package
 ```
 
-The ZIP contains only extension files; tests and research notes remain in the repository. The catalogs are sourced from God Field's public localization files and retain their original one-based ordering. To refresh, download all eight `/i18n/<language>.json` files into a directory, then run `python3 scripts/build-catalog.py /path/to/catalogs`. The generator checks that item counts and image/category identities align across languages before writing `extension/catalog.js`. Review changes against the current client before replacing it.
+The ZIP contains only extension files; `dist/godfield-room-inspector.user.js` is the standalone userscript. Tests and research notes remain in the repository. The catalogs are sourced from God Field's public localization files and retain their original one-based ordering. To refresh, download all eight `/i18n/<language>.json` files into a directory, then run `python3 scripts/build-catalog.py /path/to/catalogs`. The generator checks that item counts and image/category identities align across languages before writing `extension/catalog.js`. Review changes against the current client before replacing it.
 
 ## Project files
 
 - `extension/`: unpacked browser extension.
+- `userscript/`: generated, installable Tampermonkey userscript.
 - `tests/`: unit tests and offline sprite fixtures.
-- `scripts/`: browser checks, catalog generation, and ZIP packaging.
+- `scripts/`: browser checks, catalog/userscript generation, and release packaging.
 - `docs/`: investigation notes and a curated preview.
 
 Generated ZIPs, test screenshots, browser profiles, and local captures are excluded from Git.

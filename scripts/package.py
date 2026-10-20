@@ -1,6 +1,9 @@
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 import json
+import shutil
+import subprocess
+import sys
 
 root = Path(__file__).resolve().parents[1]
 extension = root / 'extension'
@@ -8,6 +11,8 @@ manifest = json.loads((extension / 'manifest.json').read_text())
 version = manifest['version']
 if json.loads((root / 'package.json').read_text())['version'] != version:
     raise SystemExit('package.json and manifest.json versions must match')
+
+subprocess.run([sys.executable, str(root / 'scripts' / 'build-userscript.py')], check=True)
 
 # Include only the manifest and its declared scripts/styles. Local captures,
 # editor files, or accidentally copied credentials must not enter a release.
@@ -26,3 +31,6 @@ with ZipFile(out, 'w', ZIP_DEFLATED) as archive:
     for name in sorted(files):
         archive.write(extension / name, name)
 print(out)
+userscript = root / 'dist' / 'godfield-room-inspector.user.js'
+shutil.copyfile(root / 'userscript' / userscript.name, userscript)
+print(userscript)
