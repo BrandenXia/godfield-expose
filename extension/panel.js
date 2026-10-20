@@ -235,7 +235,7 @@
     render();
     setTimeout(() => {
       if (state.status === 'waiting-sdk') {
-        status.textContent = 'Game hook not ready · reload after enabling the extension';
+        status.textContent = 'Game hook not ready · reload after enabling the inspector';
       }
     }, 15000);
   }

@@ -1,24 +1,35 @@
 // Install development dependencies with npm ci, then npx playwright install chromium.
+// Default: real MV3 injection. --userscript: generated bundle in the main world.
+// --all runs both. The userscript mode is a fixture test, not a test of
+// Tampermonkey's installation, metadata matching, or injection machinery.
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const os = require('node:os');
-(async () => {
+async function runBrowserTest(mode) {
   const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'godfield-inspector-test-'));
   const extension = path.resolve(__dirname, '../extension');
+  const userscript = mode === 'userscript';
+  const screenshotSuffix = userscript ? '-userscript' : '';
   let context;
   try {
     context = await chromium.launchPersistentContext(profile, {
       channel: 'chromium', headless: true,
-      args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
+      args: userscript ? ['--disable-extensions'] :
+        [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
       viewport: { width: 1280, height: 900 }
     });
+    if (userscript) {
+      // Execute the exact distributed bundle before the page's first script,
+      // in the main world required by the synchronous window.firebase hook.
+      await context.addInitScript({ path: path.resolve(__dirname, '../userscript/godfield-room-inspector.user.js') });
+    }
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     // Serve a deterministic game-shaped page at the exact allowed origin. This
-    // exercises actual manifest injection and both worlds without server writes.
+    // exercises manifest injection or the userscript bundle without server writes.
     await page.route('https://godfield.net/**', async route => {
       const url = new URL(route.request().url());
       if (url.pathname.startsWith('/images/')) {
@@ -32,14 +43,33 @@ const os = require('node:os');
       return route.fulfill({
         contentType: 'text/html', body: `<!doctype html><html><body><h1>God Field test room</h1>
       <script>
-        window.firebase = { onSnapshot(ref, next) { window.deliver = next; return () => { window.stopped = true; }; } };
-        window.stop = firebase.onSnapshot({path: 'modes/private/rooms/fixture'}, snapshot => { window.lastGameSnapshot = snapshot; });
+        window.fixture = {
+          hookAtFirstScript: typeof Object.getOwnPropertyDescriptor(window, 'firebase')?.set === 'function',
+          readyStateAtFirstScript: document.readyState,
+          subscriptions: 0, unsubscriptions: 0, gameSnapshots: 0
+        };
+        window.firebase = { onSnapshot(ref, next) {
+          fixture.subscriptions++;
+          window.deliver = next;
+          return () => { fixture.unsubscriptions++; window.stopped = true; };
+        } };
+        // Subscribe immediately after the SDK assignment: polling would miss it.
+        window.stop = firebase.onSnapshot({path: 'modes/private/rooms/fixture'}, snapshot => {
+          fixture.gameSnapshots++;
+          window.lastGameSnapshot = snapshot;
+        });
       </script></body></html>`
       });
     });
     await page.goto('https://godfield.net/?lang=en');
+    assert.deepEqual(await page.evaluate(() => ({
+      hookAtFirstScript: fixture.hookAtFirstScript,
+      readyStateAtFirstScript: fixture.readyStateAtFirstScript,
+      subscriptions: fixture.subscriptions
+    })), { hookAtFirstScript: true, readyStateAtFirstScript: 'loading', subscriptions: 1 });
     const panel = page.locator('#godfield-room-inspector');
     await panel.getByText('Connected · waiting for a room snapshot…').waitFor();
+    assert.equal(await panel.count(), 1);
     const room = { game: { updateCount: 1, players: [
       { id: 0, name: 'You', hp: 40, mp: 20, cp: 10, items: [{id: 1, modelId: 3}] },
       { id: 1, name: '<img src=x onerror=alert(1)>', hp: 35, mp: 15, cp: 5, items: [
@@ -87,7 +117,7 @@ const os = require('node:os');
     const output = JSON.parse(await fs.readFile(await download.path(), 'utf8'));
     assert.equal(output.players.length, 3);
     await fs.mkdir('test-results', {recursive: true});
-    await page.screenshot({path: 'test-results/inspector.png'});
+    await page.screenshot({path: `test-results/inspector${screenshotSuffix}.png`});
     // Missing sprite: retain the name and show a fallback instead of a broken image.
     await page.evaluate(room => {
       room.game.players[0].items.push({id:10, modelId:13});
@@ -99,17 +129,32 @@ const os = require('node:os');
     await page.setViewportSize({width:360,height:780});
     assert.ok(await panel.locator('.panel').evaluate(el => el.getBoundingClientRect().right <= window.innerWidth));
     assert.equal(await panel.locator('ul').first().evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length), 2);
-    await page.screenshot({path:'test-results/inspector-mobile.png'});
+    await page.screenshot({path:`test-results/inspector-mobile${screenshotSuffix}.png`});
     await panel.getByRole('button', {name: 'Collapse inspector'}).click();
     await panel.getByRole('button', {name: 'Expand inspector'}).click();
     await page.evaluate(() => stop());
     await panel.getByText('Left room · inventory cleared').waitFor();
     assert.equal(await panel.locator('details').count(), 0);
     assert.equal(await page.evaluate(() => stopped), true);
+    assert.deepEqual(await page.evaluate(() => ({
+      subscriptions: fixture.subscriptions,
+      unsubscriptions: fixture.unsubscriptions,
+      gameSnapshots: fixture.gameSnapshots
+    })), { subscriptions: 1, unsubscriptions: 1, gameSnapshots: 3 });
     assert.deepEqual(errors, []);
-    console.log('PASS: real MV3 injection, snapshot rendering, redaction, disguises, XSS, cache labeling, details state, JSON export, collapse, unsubscribe, eight languages, automatic game locale, original images, missing-image fallback and narrow screens.');
+    console.log(`PASS (${userscript ? 'userscript bundle fixture; not Tampermonkey injection' : 'real MV3 injection'}): document-start SDK interception, no extra subscriptions, snapshot rendering, redaction, disguises, XSS, cache labeling, details state, JSON export, collapse, unsubscribe, eight languages, automatic game locale, original images, missing-image fallback and narrow screens.`);
   } finally {
     await context?.close();
     await fs.rm(profile, {recursive: true, force: true});
   }
+}
+
+(async () => {
+  const args = process.argv.slice(2);
+  if (args.length > 1 || (args.length === 1 && !['--userscript', '--all'].includes(args[0]))) {
+    throw new Error('Usage: node scripts/browser-test.cjs [--userscript|--all]');
+  }
+  const modes = args[0] === '--all' ? ['extension', 'userscript'] :
+    [args[0] === '--userscript' ? 'userscript' : 'extension'];
+  for (const mode of modes) await runBrowserTest(mode);
 })().catch(error => { console.error(error); process.exitCode = 1; });
