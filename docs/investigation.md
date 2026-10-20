@@ -47,7 +47,7 @@ The extension observes the game's existing room subscription and passes the orig
 
 The panel receives a normalized snapshot through a same-window message. The page can forge that message, so the panel is a convenience display rather than an authenticated evidence channel. Text rendering uses `textContent` and bounded collections.
 
-Version 0.2.0 bundles 296 official item names in eight languages. It observes the catalog URL requested by the game to follow the selected language. Item artwork loads from God Field's public image URLs. Missing or zero IDs stay unknown, and IDs outside the bundled catalog are labeled unmapped. Cached snapshots carry a stale-data label.
+Version 0.2.1 bundles 296 official item names in eight languages. It observes the catalog URL requested by the game to follow the selected language. Item artwork loads from God Field's public image URLs. Missing or zero IDs stay unknown, and IDs outside the bundled catalog are labeled unmapped. Cached snapshots carry a stale-data label.
 
 The implementation depends on the current `window.firebase` bridge and room schema. Site updates may break it. The source data model alone is insufficient to prove exposure in an untested mode; the server could omit or replace IDs before delivery.
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         God Field Room Inspector
 // @namespace    https://github.com/BrandenXia/godfield-expose
-// @version      0.2.0
+// @version      0.2.1
 // @description  Show player items present in the room snapshots your God Field client receives.
 // @homepageURL  https://github.com/BrandenXia/godfield-expose
 // @supportURL   https://github.com/BrandenXia/godfield-expose/issues
