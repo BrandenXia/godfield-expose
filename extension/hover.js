@@ -86,10 +86,7 @@
       }
       return null;
     }
-    function paintAnalysis(resolved) {
-      const analysis = GodfieldMatchups.analyze(resolved.item, resolved.owner, getState());
-      popup.classList.toggle('has-analysis', Boolean(analysis));
-      if (!analysis) return;
+    function paintAnalysis(resolved, analysis) {
       const section = el('section', 'matchups');
       section.setAttribute('aria-label', 'Combat matchups');
       content.append(section);
@@ -108,8 +105,7 @@
         return;
       }
       section.append(el('p', 'matchup-perspective', `Item owner: ${analysis.owner.name || 'Player'}`));
-      const focus = GodfieldLocalization.item(resolved.item.modelId, language());
-      section.append(el('p', 'matchup-note', [focus.elementLabel, ...(analysis.attack?.notes || []), analysis.availability.text].filter(Boolean).join(' · ')));
+      if (analysis.availability.ready === false) section.append(el('p', 'matchup-note', analysis.availability.text));
       if (analysis.uncertainTeams) section.append(el('p', 'matchup-note', 'Team data unavailable: comparing other players.'));
       for (const {mode, groups} of analysis.sections) {
         const heading = mode === 'defenses' ? 'Possible enemy protection' : 'Enemy attacks to prepare for';
@@ -150,7 +146,6 @@
       const scroll = content.scrollTop;
       content.replaceChildren();
       content.lang = language();
-      popup.classList.toggle('single-item', Boolean(resolved.item));
       popup.classList.remove('has-analysis');
       if (resolved.player) {
         const p = resolved.player;
@@ -162,13 +157,11 @@
         if (!p.items.length) list.append(el('li', 'empty-items', p.itemsAvailable ? 'No items.' : 'Inventory was not included in this snapshot.'));
         content.append(list);
       } else {
-        const item = resolved.item;
-        title.textContent = 'Item details';
-        const list = el('ul', 'hover-items comparison');
-        const real = renderItem(item);
-        list.append(real);
-        content.append(list);
-        paintAnalysis(resolved);
+        const analysis = GodfieldMatchups.analyze(resolved.item, resolved.owner, getState());
+        if (!analysis) { hide(); return; }
+        title.textContent = 'Combat analysis';
+        popup.classList.add('has-analysis');
+        paintAnalysis(resolved, analysis);
       }
       if (getState().fromCache) content.prepend(el('div', 'hover-stale', 'Cached snapshot · may be stale'));
       popup.hidden = false;

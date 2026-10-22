@@ -105,10 +105,11 @@ async function runHoverTest(mode) {
     await page.keyboard.press('Escape');
     // Two identical dream appearances resolve to different real models.
     await page.locator('#item-7').hover();
-    await popup.getByText('Item details',{exact:true}).waitFor();
-    await popup.getByText('Crossbow',{exact:true}).waitFor();
+    await popup.getByText('Combat analysis',{exact:true}).waitFor();
+    await popup.getByText('Combined compatible DEF 0 vs ATK 2',{exact:true}).waitFor();
+    assert.equal(await popup.getByText('Crossbow',{exact:true}).count(),0);
     assert.equal(await popup.getByText('Dream appearance',{exact:true}).count(),0);
-    assert.equal(await popup.locator('.comparison .card').count(),1);
+    assert.equal(await popup.locator('.card, .item-art, .item-name').count(),0);
     await fs.mkdir('test-results',{recursive:true});
     await page.screenshot({path:`test-results/hover-dream${screenshotSuffix}.png`});
     await page.keyboard.press('Escape');
@@ -117,7 +118,8 @@ async function runHoverTest(mode) {
       document.querySelector('#main').append(native[7].a);
     });
     await page.locator('#item-8').hover();
-    await popup.getByText('Punch',{exact:true}).waitFor();
+    await popup.getByText('Combined compatible DEF 0 vs ATK 3',{exact:true}).waitFor();
+    assert.equal(await popup.getByText('Punch',{exact:true}).count(),0);
     assert.equal(await popup.getByText('Crossbow',{exact:true}).count(),0);
     await page.locator('#item-8').click();
     assert.equal(await page.evaluate(()=>clicks),1);
@@ -126,10 +128,15 @@ async function runHoverTest(mode) {
     await page.evaluate(()=>{native[8].f=null;room.game.players[1].items[0].fakeModelId=0;deliver({data:()=>room});});
     await page.mouse.move(10,10);
     await page.locator('#item-8').hover();
-    await popup.getByText('Item details',{exact:true}).waitFor();
+    await popup.getByText('Combat analysis',{exact:true}).waitFor();
     assert.equal(await popup.getByText('Dream appearance',{exact:true}).count(),0);
     await page.evaluate(()=>native[8].a.remove());
     await popup.waitFor({state:'hidden'});
+    // Noncombat cards do not open an empty preview.
+    await page.evaluate(()=>itemCard(9,3,0,320));
+    await page.locator('#item-9').hover();
+    await page.waitForTimeout(300);
+    assert.ok(await popup.isHidden());
     // No positional/name guessing after a layout change or stale inventory.
     await page.evaluate(()=>{room.game.players[0].items=[];deliver({data:()=>room});});
     await page.locator('#item-7').hover();
@@ -144,7 +151,7 @@ async function runHoverTest(mode) {
     await page.screenshot({path:`test-results/hover-mobile${screenshotSuffix}.png`});
     await page.evaluate(()=>deliver({data:()=>({game:null})}));
     await popup.waitFor({state:'hidden'});
-    // Full panel still has a keyboard shortcut and translated card previews.
+    // Full panel still has a keyboard shortcut and translated matchups.
     await page.keyboard.press('Alt+i');
     await inspector.getByRole('button',{name:'Collapse inspector'}).waitFor();
     // Matchups use the real dream model and the item's owner, excluding allies.
@@ -165,6 +172,9 @@ async function runHoverTest(mode) {
     const analysis=popup.getByRole('region',{name:'Combat matchups'});
     await analysis.getByRole('heading',{name:'Possible enemy protection'}).waitFor();
     await analysis.getByText('Ice Armor',{exact:true}).waitFor();
+    assert.equal(await popup.getByText('Torch',{exact:true}).count(),0);
+    assert.equal(await popup.locator('.card, .item-art, .item-name').count(),0);
+    assert.ok(await analysis.locator('.matchup-art').count() > 0);
     await analysis.getByText('Super Mirror',{exact:true}).waitFor();
     assert.equal(await analysis.getByText('God Shield',{exact:true}).count(),0); // Wrong element.
     assert.equal(await analysis.getByRole('heading',{name:'Ally',exact:true}).count(),0);
@@ -206,6 +216,7 @@ async function runHoverTest(mode) {
     await ownCard.focus();
     await analysis.getByText('Item owner: You',{exact:true}).waitFor();
     await analysis.getByText('アイスアーマー',{exact:true}).waitFor();
+    assert.equal(await popup.locator('.card, .item-art, .item-name').count(),0);
     assert.equal(await analysis.getByLabel('Item owner').count(),0);
     await popup.getByRole('button',{name:'Pin preview'}).click();
     await page.evaluate(()=>{room.game.players[1].items.push({id:48,modelId:145});deliver({data:()=>room});});

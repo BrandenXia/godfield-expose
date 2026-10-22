@@ -97,7 +97,6 @@
       button:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #ffd567; outline-offset: -3px; }
       .hover-preview { position: fixed; width: min(420px, calc(100vw - 16px)); background: #ddffcc;
         border: 2px solid #008f6f; border-radius: 12px; box-shadow: 0 6px 28px #003b3b55; overflow: hidden; }
-      .hover-preview.single-item { width: min(310px, calc(100vw - 16px)); }
       .hover-preview.has-analysis { width: min(440px, calc(100vw - 16px)); }
       .matchups { padding: 0 10px 10px; }
       .matchups h3 { font-size: 13px; color: #006a51; margin: 12px 0 6px; }
@@ -126,7 +125,6 @@
       .hover-hint { padding: 7px 9px; font-size: 9px; color: #17604e; background: #bbedd5; }
       .hover-stale { padding: 6px 10px; color: #886b38; background: #fff0cf; font-size: 11px; }
       .hover-preview .item-name { display: block; -webkit-line-clamp: unset; overflow: visible; }
-      .hover-preview .comparison { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
       .hover-preview .empty-items { color: #17604e; }
       .card:focus-visible { outline: 3px solid #ffd567; outline-offset: -3px; }
       @media (max-width: 380px) { ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } h2 { font-size: 17px; } }

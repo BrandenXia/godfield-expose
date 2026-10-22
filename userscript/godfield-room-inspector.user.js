@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         God Field Room Inspector
 // @namespace    https://github.com/BrandenXia/godfield-expose
-// @version      0.5.0
+// @version      0.5.1
 // @description  Show player items present in the room snapshots your God Field client receives.
 // @homepageURL  https://github.com/BrandenXia/godfield-expose
 // @supportURL   https://github.com/BrandenXia/godfield-expose/issues
@@ -598,10 +598,7 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       }
       return null;
     }
-    function paintAnalysis(resolved) {
-      const analysis = GodfieldMatchups.analyze(resolved.item, resolved.owner, getState());
-      popup.classList.toggle('has-analysis', Boolean(analysis));
-      if (!analysis) return;
+    function paintAnalysis(resolved, analysis) {
       const section = el('section', 'matchups');
       section.setAttribute('aria-label', 'Combat matchups');
       content.append(section);
@@ -620,8 +617,7 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
         return;
       }
       section.append(el('p', 'matchup-perspective', `Item owner: ${analysis.owner.name || 'Player'}`));
-      const focus = GodfieldLocalization.item(resolved.item.modelId, language());
-      section.append(el('p', 'matchup-note', [focus.elementLabel, ...(analysis.attack?.notes || []), analysis.availability.text].filter(Boolean).join(' · ')));
+      if (analysis.availability.ready === false) section.append(el('p', 'matchup-note', analysis.availability.text));
       if (analysis.uncertainTeams) section.append(el('p', 'matchup-note', 'Team data unavailable: comparing other players.'));
       for (const {mode, groups} of analysis.sections) {
         const heading = mode === 'defenses' ? 'Possible enemy protection' : 'Enemy attacks to prepare for';
@@ -662,7 +658,6 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       const scroll = content.scrollTop;
       content.replaceChildren();
       content.lang = language();
-      popup.classList.toggle('single-item', Boolean(resolved.item));
       popup.classList.remove('has-analysis');
       if (resolved.player) {
         const p = resolved.player;
@@ -674,13 +669,11 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
         if (!p.items.length) list.append(el('li', 'empty-items', p.itemsAvailable ? 'No items.' : 'Inventory was not included in this snapshot.'));
         content.append(list);
       } else {
-        const item = resolved.item;
-        title.textContent = 'Item details';
-        const list = el('ul', 'hover-items comparison');
-        const real = renderItem(item);
-        list.append(real);
-        content.append(list);
-        paintAnalysis(resolved);
+        const analysis = GodfieldMatchups.analyze(resolved.item, resolved.owner, getState());
+        if (!analysis) { hide(); return; }
+        title.textContent = 'Combat analysis';
+        popup.classList.add('has-analysis');
+        paintAnalysis(resolved, analysis);
       }
       if (getState().fromCache) content.prepend(el('div', 'hover-stale', 'Cached snapshot · may be stale'));
       popup.hidden = false;
@@ -868,7 +861,6 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       button:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #ffd567; outline-offset: -3px; }
       .hover-preview { position: fixed; width: min(420px, calc(100vw - 16px)); background: #ddffcc;
         border: 2px solid #008f6f; border-radius: 12px; box-shadow: 0 6px 28px #003b3b55; overflow: hidden; }
-      .hover-preview.single-item { width: min(310px, calc(100vw - 16px)); }
       .hover-preview.has-analysis { width: min(440px, calc(100vw - 16px)); }
       .matchups { padding: 0 10px 10px; }
       .matchups h3 { font-size: 13px; color: #006a51; margin: 12px 0 6px; }
@@ -897,7 +889,6 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       .hover-hint { padding: 7px 9px; font-size: 9px; color: #17604e; background: #bbedd5; }
       .hover-stale { padding: 6px 10px; color: #886b38; background: #fff0cf; font-size: 11px; }
       .hover-preview .item-name { display: block; -webkit-line-clamp: unset; overflow: visible; }
-      .hover-preview .comparison { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
       .hover-preview .empty-items { color: #17604e; }
       .card:focus-visible { outline: 3px solid #ffd567; outline-offset: -3px; }
       @media (max-width: 380px) { ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } h2 { font-size: 17px; } }

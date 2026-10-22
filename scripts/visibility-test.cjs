@@ -144,10 +144,11 @@ async function run(mode) {
     // Hover remains available for matchups, but has no dream comparison.
     await torch.hover();
     const popup=page.locator('#godfield-room-inspector .hover-preview');
-    await popup.getByText('Item details',{exact:true}).waitFor();
-    await popup.getByText('Torch',{exact:true}).waitFor();
+    await popup.getByText('Combat analysis',{exact:true}).waitFor();
+    await popup.getByText('Ice Armor',{exact:true}).waitFor();
+    assert.equal(await popup.getByText('Torch',{exact:true}).count(),0);
     assert.equal(await popup.getByText('Dream appearance',{exact:true}).count(),0);
-    assert.equal(await popup.locator('.comparison .card').count(),1);
+    assert.equal(await popup.locator('.card').count(),0);
     await page.keyboard.press('Escape');
     await page.mouse.move(20,20);
     await fs.mkdir('test-results',{recursive:true});

@@ -22,7 +22,7 @@ Download the extension ZIP from [Releases](https://github.com/BrandenXia/godfiel
 2. Enable **Developer mode**.
 3. Choose **Load unpacked**, then select the extracted folder containing `manifest.json` (or this repository's `extension` folder).
 4. Open or **reload** [godfield.net](https://godfield.net/) and enter a game.
-5. Hover a player’s name tag to see their hand, or hover a game card to inspect it. The full inspector starts collapsed at the lower right; use **+** or **Alt+I** to open it.
+5. Hover a player’s name tag to see their hand, or hover a combat card to see enemy matchups. The full inspector starts collapsed at the lower right; use **+** or **Alt+I** to open it.
 
 **Updating an existing install:** replace the extracted extension files (or keep using this repository's `extension` folder), click **Reload** on the extension card, then reload God Field.
 
@@ -48,13 +48,13 @@ The userscript is self-contained, runs only on `https://godfield.net/*`, and nee
 - **Combat matchups:** attack previews show each opponent’s compatible defenses; protection previews show enemy attacks and whether that protection covers them. Dual-purpose items show both.
 - **Keep a preview open:** move into it to inspect the cards, or select **Pin**. Select **×** or press **Esc** to dismiss it.
 - **Keyboard:** tab to a player tag or card for its preview. **Alt+I** toggles the full inspector.
-- **Full inspector:** select **+** at the lower right to browse every player, change the item language, or save JSON. Its cards also offer hover previews with full names.
+- **Full inspector:** select **+** at the lower right to browse every player, change the item language, or save JSON. Its combat cards also offer enemy matchup previews.
 
 <img src="docs/images/hover-player.png" alt="Hovering an opponent’s name tag in Training shows their nine-item hand beside the game" width="800">
 
 ## Combat matchup analysis
 
-Hover a native game card or a card in the expanded inspector. Beneath its artwork, the preview compares the real item with the other hands already received by your tab:
+Hover a native game card or a card in the expanded inspector. The preview opens directly to combat analysis, without repeating the hovered card’s image or description. Noncombat cards do not open a preview. Comparisons use the real item and the other hands already received by your tab:
 
 - **Attack items:** compatible protection grouped by opponent, including ordinary DEF, reflection, bouncing, blocking, counters, and element filtering. A summary shows combined compatible DEF, or the best single defense when Flash limits the defender to one item.
 - **Protection items:** revealed weapon attacks, offensive miracles, and attack add-ons, including attacks that bypass the hovered protection. Results distinguish full coverage, partial coverage, incompatible elements, and effects that need a combination.
@@ -73,7 +73,7 @@ English, Français, 日本語, 한국어, Português, Русский, 简体中�
 
 All 296 item names, category labels, and stat labels come from the game's official catalogs, bundled in all eight languages. Revealed dream items use the real item’s translated name. Extension controls and status messages remain in English.
 
-The panel uses the game's mint/green palette and displays a three-column card grid (two columns on narrow screens). Item artwork loads lazily from the original `godfield.net/images/items/` URLs. A missing image shows a question mark while retaining the item name. Concealed IDs do not borrow the disguise's image or imply a known real item. Hover or focus a card for a preview with its full name.
+The panel uses the game's mint/green palette and displays a three-column card grid (two columns on narrow screens). Item artwork loads lazily from the original `godfield.net/images/items/` URLs. A missing image shows a question mark while retaining the item name. Concealed IDs do not borrow the disguise's image or imply a known real item. Hover or focus a combat card for enemy matchup analysis.
 
 ## Reading the panel
 
