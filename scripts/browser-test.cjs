@@ -38,7 +38,8 @@ const os = require('node:os');
       });
     });
     await page.goto('https://godfield.net/?lang=en');
-    const panel = page.locator('#godfield-room-inspector');
+    const panel = page.locator('#godfield-room-inspector .panel');
+    await panel.getByRole('button', {name:'Expand inspector'}).click();
     await panel.getByText('Connected · waiting for a room snapshot…').waitFor();
     const room = { game: { updateCount: 1, players: [
       { id: 0, name: 'You', hp: 40, mp: 20, cp: 10, items: [{id: 1, modelId: 3}] },
@@ -51,7 +52,7 @@ const os = require('node:os');
     await panel.getByText('Live room snapshot', { exact: true }).waitFor();
     await panel.getByText('Unknown / concealed item').waitFor();
     await panel.getByText('Unmapped item #9999').waitFor();
-    await panel.getByText('Displayed as: Exchange (fakeModelId)').waitFor();
+    await panel.getByText('Displayed as: Exchange').waitFor();
     assert.equal(await panel.locator('img').count(), 2);
     assert.equal(await panel.locator('img[src=x]').count(), 0);
     await panel.locator('img[src$="crossbow.webp"]').waitFor();
@@ -59,7 +60,7 @@ const os = require('node:os');
     const select = panel.getByRole('combobox', {name:'Item language'});
     await select.selectOption('ja');
     await panel.getByText('クロスボウ', {exact:true}).waitFor();
-    await panel.getByText('Displayed as: 両替 (fakeModelId)').waitFor();
+    await panel.getByText('Displayed as: 両替').waitFor();
     await panel.getByText('+攻2', {exact:true}).waitFor();
     // Observing a successful catalog fetch updates Auto, not a manual override.
     await page.evaluate(() => fetch('/i18n/zh-hant.json'));
@@ -97,7 +98,7 @@ const os = require('node:os');
     await page.waitForFunction(() => document.querySelector('#godfield-room-inspector').shadowRoot.querySelector('img[src$="punch.webp"]')?.hidden === true);
     await panel.getByText('Punch', {exact:true}).waitFor();
     await page.setViewportSize({width:360,height:780});
-    assert.ok(await panel.locator('.panel').evaluate(el => el.getBoundingClientRect().right <= window.innerWidth));
+    assert.ok(await panel.evaluate(el => el.getBoundingClientRect().right <= window.innerWidth));
     assert.equal(await panel.locator('ul').first().evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length), 2);
     await page.screenshot({path:'test-results/inspector-mobile.png'});
     await panel.getByRole('button', {name: 'Collapse inspector'}).click();

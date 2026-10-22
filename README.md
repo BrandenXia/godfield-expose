@@ -18,11 +18,21 @@ Download the extension ZIP from [Releases](https://github.com/BrandenXia/godfiel
 2. Enable **Developer mode**.
 3. Choose **Load unpacked**, then select the extracted folder containing `manifest.json` (or this repository's `extension` folder).
 4. Open or **reload** [godfield.net](https://godfield.net/) and enter a game.
-5. Expand a player's row in **Room Inspector**, at the lower right. Use **−** to collapse the panel when it covers game controls.
+5. Hover a player’s name tag to see their hand, or hover a game card to inspect it. The full inspector starts collapsed at the lower right; use **+** or **Alt+I** to open it.
 
 **Updating an existing install:** replace the extracted extension files (or keep using this repository's `extension` folder), click **Reload** on the extension card, then reload God Field.
 
 No build, npm install, account permissions, or background service is required. The extension runs only on `https://godfield.net/*`. For ZIP installation, extract the release ZIP and load the extracted folder containing `manifest.json`.
+
+## Hover previews
+
+- **Player name tags:** hover a native name tag to see that player’s items and HP/MP/CP. The preview follows the tag and updates with received room snapshots.
+- **Dream items:** hover a disguised game card to compare its real item with its dream appearance, side by side. Cards with identical appearances are resolved from their own item data.
+- **Keep a preview open:** move into it to inspect the cards, or select **Pin**. Select **×** or press **Esc** to dismiss it.
+- **Keyboard:** tab to a player tag or card for its preview. **Alt+I** toggles the full inspector.
+- **Full inspector:** select **+** at the lower right to browse every player, change the item language, or save JSON. Its cards also offer hover previews with full names.
+
+<img src="docs/images/hover-player.png" alt="Hovering an opponent’s name tag in Training shows their nine-item hand beside the game" width="800">
 
 ## Item languages and artwork
 
@@ -32,7 +42,7 @@ English, Français, 日本語, 한국어, Português, Русский, 简体中�
 
 All 296 item names, category labels, and stat labels come from the game's official catalogs, bundled in all eight languages. Names on disguised items are translated too. Extension controls and status messages remain in English.
 
-The panel uses the game's mint/green palette and displays a three-column card grid (two columns on narrow screens). Item artwork loads lazily from the original `godfield.net/images/items/` URLs. A missing image shows a question mark while retaining the item name. Concealed IDs do not borrow the disguise's image or imply a known real item. Hover a card for its full name if it is truncated.
+The panel uses the game's mint/green palette and displays a three-column card grid (two columns on narrow screens). Item artwork loads lazily from the original `godfield.net/images/items/` URLs. A missing image shows a question mark while retaining the item name. Concealed IDs do not borrow the disguise's image or imply a known real item. Hover or focus a card for a preview with its full name.
 
 ## Reading the panel
 
@@ -50,6 +60,8 @@ All players are shown, including you. Player IDs are game-local indices; the ext
 
 `hook.js` observes the existing Firebase room listener in the page's MAIN world. `snapshot.js` copies only the required game fields. The isolated `panel.js` renders these fields in a shadow DOM panel. The extension makes no extra database requests, modifies no game data, and has no telemetry or automatic storage. Bundled catalogs supply 296 item names in eight languages without additional catalog requests. `locale-hook.js` observes successful game catalog fetches without reading response bodies or changing the returned promise. Original item images load from God Field as needed; the extension never sends inventory snapshots to another service.
 
+`targets.js` associates native player tags and cards with their Dart view data; `hover.js` validates those associations against the received snapshot and renders previews. It does not identify cards by their image or screen order. This adapter depends on the current compiled client’s view layout; if a site update breaks native hover previews, the full inspector remains available.
+
 The hook depends on the public `window.firebase` bridge and current room schema. It is not compatible with native mobile apps. If the panel stays at “Game hook not ready,” enable the extension before reloading. If it reports an unrecognized format, the site's schema may have changed. If opponents show unknown items, their real IDs were not received; this is not an installation error.
 
 ## Development
@@ -62,7 +74,7 @@ Run the dependency-free unit tests:
 npm test
 ```
 
-Run the real-browser integration test (uses a local fixture, not a live match):
+Run the real-browser integration tests (use local fixtures, not live matches):
 
 ```sh
 npm ci
@@ -70,7 +82,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-The browser test loads the unpacked extension into a temporary Chromium profile and deletes that profile afterward. It checks both JavaScript worlds, UI behavior, and exports. Screenshots are in `test-results/inspector.png` and `test-results/inspector-mobile.png`. It also checks all eight languages, automatic locale changes, manual overrides, successful image loading, and broken-image fallback.
+The browser tests load the unpacked extension into a temporary Chromium profile and delete that profile afterward. They check both JavaScript worlds, UI behavior, and exports. Screenshots are in `test-results/inspector.png` and `test-results/inspector-mobile.png`. They also check all eight languages, automatic locale changes, manual overrides, successful image loading, and broken-image fallback. Hover tests cover native player/card association, duplicate names, identical dream appearances, reordered cards, pinning, keyboard access, live updates, stale data, click passthrough, room cleanup, and narrow-screen positioning. Hover screenshots are saved alongside the panel screenshots.
 
 Create an installable ZIP with Python 3:
 

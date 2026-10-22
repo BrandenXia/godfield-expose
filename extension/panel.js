@@ -50,6 +50,9 @@
       :host { all: initial; position: fixed; z-index: 2147483647; right: 16px; bottom: 16px;
         color: #34564a; font: 13px/1.45 Meiryo, system-ui, sans-serif; color-scheme: light; }
       * { box-sizing: border-box; } button, select { font: inherit; cursor: pointer; }
+      .panel.is-collapsed { width: 250px; }
+      .is-collapsed header { border-bottom: 0; padding: 7px 10px; }
+      .is-collapsed h2 { font-size: 16px; }
       .panel { width: min(460px, calc(100vw - 32px)); background: #ddffcc;
         border: 3px solid #008f6f; border-radius: 17px; box-shadow: 0 5px 0 #006a5140, 0 10px 32px #003b3b35; overflow: hidden; }
       header { padding: 10px 13px; display: flex; align-items: center; gap: 9px; background: #008f6f;
@@ -93,6 +96,23 @@
         border: 1px solid #ddffcc; border-radius: 5px; padding: 4px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }
       button:disabled { opacity: .5; cursor: default; } [hidden] { display: none !important; }
       button:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #ffd567; outline-offset: -3px; }
+      .hover-preview { position: fixed; width: min(420px, calc(100vw - 16px)); background: #ddffcc;
+        border: 2px solid #008f6f; border-radius: 12px; box-shadow: 0 6px 28px #003b3b55; overflow: hidden; }
+      .hover-preview.single-item { width: min(310px, calc(100vw - 16px)); }
+      .hover-header { display: flex; gap: 6px; align-items: center; padding: 8px 10px; background: #008f6f; color: #eeffee; }
+      .hover-title { flex: 1; overflow-wrap: anywhere; font-size: 13px; }
+      .hover-button { border: 1px solid #ddffcc; border-radius: 5px; color: #008f6f; background: #eeffee; padding: 3px 7px; font-size: 11px; }
+      .hover-content { overflow-y: auto; max-height: min(65vh, calc(100dvh - 115px)); scrollbar-width: thin; scrollbar-color: #008f6f #ddffcc; }
+      .hover-stats { padding: 8px 10px 0; font-size: 11px; color: #008f6f; }
+      .hover-hint { padding: 7px 9px; font-size: 9px; color: #17604e; background: #bbedd5; }
+      .hover-stale { padding: 6px 10px; color: #886b38; background: #fff0cf; font-size: 11px; }
+      .hover-preview .item-name { display: block; -webkit-line-clamp: unset; overflow: visible; }
+      .hover-preview .comparison { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
+      .reveal-label { margin: -7px -6px 6px; padding: 5px 2px; background: #008f6f; color: #eeffee; font-size: 11px; font-weight: 700; }
+      .reveal-label.apparent { background: #ddbb77; color: #4f4f4f; }
+      .comparison .id { top: 33px; }
+      .hover-preview .empty-items { color: #17604e; }
+      .card:focus-visible { outline: 3px solid #ffd567; outline-offset: -3px; }
       @media (max-width: 380px) { ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } h2 { font-size: 17px; } }
       @media (max-height: 500px) { .body { max-height: calc(100dvh - 190px); } }
     `;
@@ -102,14 +122,15 @@
       if (text !== undefined) node.textContent = text;
       return node;
     };
-    const panel = el('section', 'panel');
+    const panel = el('section', 'panel is-collapsed');
     panel.setAttribute('aria-label', 'God Field Room Inspector');
     const header = el('header');
     const heading = el('div');
-    heading.append(el('div', 'eyebrow', 'God Field'), el('h2', '', 'Room Inspector'));
-    const toggle = el('button', 'toggle', '−');
-    toggle.setAttribute('aria-label', 'Collapse inspector');
-    toggle.setAttribute('aria-expanded', 'true');
+    heading.append(el('div', 'eyebrow', 'Hover names & cards'), el('h2', '', 'Room Inspector'));
+    const toggle = el('button', 'toggle', '+');
+    toggle.setAttribute('aria-label', 'Expand inspector');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.title = 'Toggle inventory panel (Alt+I)';
     header.append(el('span', 'mark', '◈'), heading, toggle);
     const status = el('p', 'status');
     status.setAttribute('role', 'status');
@@ -134,15 +155,23 @@
     panel.append(header, toolbar, body, footer);
     shadow.append(style, panel);
     document.documentElement.append(host);
-    let collapsed = false;
+    let collapsed = true;
+    body.hidden = footer.hidden = toolbar.hidden = true;
     const expanded = new Map();
     toggle.onclick = () => {
       collapsed = !collapsed;
+      panel.classList.toggle('is-collapsed', collapsed);
       body.hidden = footer.hidden = toolbar.hidden = collapsed;
       toggle.textContent = collapsed ? '+' : '−';
       toggle.setAttribute('aria-label', collapsed ? 'Expand inspector' : 'Collapse inspector');
       toggle.setAttribute('aria-expanded', String(!collapsed));
     };
+    document.addEventListener('keydown', event => {
+      if (event.altKey && !event.ctrlKey && !event.metaKey && event.code === 'KeyI' && !event.repeat) {
+        event.preventDefault();
+        toggle.click();
+      }
+    });
     exportButton.onclick = () => {
       // Explicit, local download. No account identifiers or private room codes.
       const url = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
@@ -153,6 +182,43 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     };
     const model = id => GodfieldLocalization.item(id, language());
+    const renderItem = item => {
+      const info = model(item.modelId);
+      const validId = Number.isSafeInteger(item.modelId) && item.modelId > 0;
+      const name = info?.name ?? (validId ? `Unmapped item #${item.modelId}` : 'Unknown / concealed item');
+      const row = el('li', `card${item.used ? ' used' : ''}${info ? '' : ' unknown'}`);
+      row.setAttribute('aria-label', name);
+      row.append(el('span', 'id', validId ? `#${item.modelId}` : '—'));
+      if (item.used) row.append(el('span', 'used-label', 'used'));
+      const art = el('div', 'art');
+      const placeholder = el('span', 'placeholder', '?');
+      placeholder.setAttribute('aria-hidden', 'true');
+      art.append(placeholder);
+      if (info) {
+        const img = el('img');
+        img.alt = ''; // The visible name immediately below labels the card.
+        img.width = img.height = 64;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.referrerPolicy = 'no-referrer';
+        img.onload = () => { placeholder.hidden = true; };
+        img.onerror = () => { img.hidden = true; placeholder.hidden = false; };
+        img.src = info.image;
+        art.append(img);
+      }
+      row.append(art, el('span', 'item-name', name));
+      if (info) {
+        row.append(el('div', 'category', info.categoryLabel));
+        const itemStats = el('div', 'item-stats');
+        for (const stat of info.stats) itemStats.append(el('span', 'item-stat', stat));
+        row.append(itemStats);
+      }
+      if (Number.isSafeInteger(item.fakeModelId) && item.fakeModelId > 0) {
+        row.append(el('div', 'fake', `Displayed as: ${model(item.fakeModelId)?.name ?? `item #${item.fakeModelId}`}`));
+      }
+      return row;
+    };
+    const hover = GodfieldHover.create({shadow, renderItem, getState: () => state, language});
     render = () => {
       autoOption.textContent = `Auto · ${GODFIELD_CATALOG.languages[gameLanguage].label}`;
       body.lang = language();
@@ -189,45 +255,15 @@
         list.setAttribute('aria-label', `${player.name || 'Player'} items`);
         if (!player.items.length) list.append(el('li', 'empty-items', player.itemsAvailable ? 'No items.' : 'Inventory was not included in this snapshot.'));
         for (const item of player.items) {
-          const info = model(item.modelId);
-          const validId = Number.isSafeInteger(item.modelId) && item.modelId > 0;
-          const name = info?.name ?? (validId ? `Unmapped item #${item.modelId}` : 'Unknown / concealed item');
-          const row = el('li', `card${item.used ? ' used' : ''}${info ? '' : ' unknown'}`);
-          row.title = name;
-          row.append(el('span', 'id', validId ? `#${item.modelId}` : '—'));
-          if (item.used) row.append(el('span', 'used-label', 'used'));
-          const art = el('div', 'art');
-          const placeholder = el('span', 'placeholder', '?');
-          placeholder.setAttribute('aria-hidden', 'true');
-          art.append(placeholder);
-          if (info) {
-            const img = el('img');
-            img.alt = ''; // The visible name immediately below labels the card.
-            img.width = img.height = 64;
-            img.loading = 'lazy';
-            img.decoding = 'async';
-            img.referrerPolicy = 'no-referrer';
-            img.onload = () => { placeholder.hidden = true; };
-            img.onerror = () => { img.hidden = true; placeholder.hidden = false; };
-            img.src = info.image;
-            art.append(img);
-          }
-          row.append(art, el('span', 'item-name', name));
-          if (info) {
-            row.append(el('div', 'category', info.categoryLabel));
-            const itemStats = el('div', 'item-stats');
-            for (const stat of info.stats) itemStats.append(el('span', 'item-stat', stat));
-            row.append(itemStats);
-          }
-          if (Number.isSafeInteger(item.fakeModelId) && item.fakeModelId > 0) {
-            row.append(el('div', 'fake', `Displayed as: ${model(item.fakeModelId)?.name ?? `item #${item.fakeModelId}`} (fakeModelId)`));
-          }
+          const row = renderItem(item);
+          hover.bindCard(row, item);
           list.append(row);
         }
         details.append(summary, list);
         body.append(details);
       }
       body.scrollTop = scroll;
+      hover.update();
       if (focusedPlayer !== undefined) {
         [...body.querySelectorAll('summary')].find(s => s.dataset.player === focusedPlayer)?.focus({ preventScroll: true });
       }

@@ -51,6 +51,16 @@ Version 0.2.0 bundles 296 official item names in eight languages. It observes th
 
 The implementation depends on the current `window.firebase` bridge and room schema. Site updates may break it. The source data model alone is insufficient to prove exposure in an untested mode; the server could omit or replace IDs before delivery.
 
+## Native hover verification (October 22, 2026)
+
+Version 0.3.0 associates native player tags and item cards with the Dart view objects retained by their event callbacks. The adapter reads own data fields without invoking the callbacks or getters. Listener registration still receives its original arguments. Player views supply the game-local player ID and name; item views supply the item instance ID, real model ID, and apparent model ID. The isolated UI validates these fields against the current normalized room snapshot before displaying a preview.
+
+In a live Training game, hovering the opposing bot’s native name tag displayed its nine-item hand. Hovering a native card displayed its matching real item. No human room was joined for this check. A natural dream event was not observed in that live game.
+
+Deterministic browser fixtures use the observed Dart callback/view structure to test dream previews: two native cards have the same apparent model but different real models, and each preview shows the correct real item. The tests also cover duplicate player names, reordered cards, item updates, absent/stale items, node removal, room exit, keyboard navigation, pinning, and unchanged game click handling. These fixtures establish adapter/UI behavior rather than exposure in additional game modes.
+
+Native hover support depends on the current compiled client’s field layout. If that layout changes, the full inventory panel remains the fallback. Browser profiles and diagnostic traces from the live check are not published.
+
 ## Confidentiality implication
 
 In the tested private mode, both clients receive the same stored player array, including opponents' real model IDs. Keeping those items secret requires omitting them from shared participant-readable data; hiding them in the UI does not remove data already delivered to a client.

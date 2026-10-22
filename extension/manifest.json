@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "God Field Room Inspector",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Show player items present in the room snapshots your God Field client receives.",
   "minimum_chrome_version": "111",
   "content_scripts": [
@@ -10,6 +10,7 @@
         "https://godfield.net/*"
       ],
       "js": [
+        "targets.js",
         "snapshot.js",
         "locale-hook.js",
         "hook.js"
@@ -24,6 +25,7 @@
       "js": [
         "catalog.js",
         "localization.js",
+        "hover.js",
         "panel.js"
       ],
       "run_at": "document_start",
