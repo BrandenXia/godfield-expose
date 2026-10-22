@@ -78,11 +78,72 @@
         if (!item || !Number.isSafeInteger(item.id) || !Number.isSafeInteger(item.modelId)) return null;
         // Validate against received data. Identical disguise images never identify
         // a card: its native view supplies the real model and instance ID.
-        const match = state.players.flatMap(p => p.items).find(i => i.id === item.id &&
-          i.modelId === item.modelId && (i.fakeModelId || 0) === (item.fakeModelId || 0));
-        return match && { item: match };
+        const owners = state.players.filter(p => p.items.some(i => i.id === item.id &&
+          i.modelId === item.modelId && (i.fakeModelId || 0) === (item.fakeModelId || 0)));
+        const owner = target.playerId !== undefined ? owners.find(p => p.id === target.playerId) : owners.length === 1 ? owners[0] : null;
+        if (target.playerId !== undefined && !owner) return null;
+        const match = (owner || owners[0])?.items.find(i => i.id === item.id && i.modelId === item.modelId && (i.fakeModelId || 0) === (item.fakeModelId || 0));
+        return match && { item: match, owner, owners };
       }
       return null;
+    }
+    function paintAnalysis(resolved) {
+      const analysis = GodfieldMatchups.analyze(resolved.item, resolved.owner, getState());
+      popup.classList.toggle('has-analysis', Boolean(analysis));
+      if (!analysis) return;
+      const section = el('section', 'matchups');
+      section.setAttribute('aria-label', 'Combat matchups');
+      content.append(section);
+      if (analysis.ambiguous) {
+        section.append(el('p', 'matchup-note', 'This card matches more than one hand. Choose its owner to compare opponents.'));
+        const select = el('select', 'owner-select');
+        select.setAttribute('aria-label', 'Item owner');
+        const blank = el('option', '', 'Choose owner…');
+        blank.value = ''; select.append(blank);
+        for (const p of resolved.owners) {
+          const option = el('option', '', `${p.name} · Player ${p.id}`);
+          option.value = String(p.id); select.append(option);
+        }
+        select.onchange = () => { if (select.value !== '') { active = {...active, playerId:Number(select.value)}; paint(); } };
+        section.append(select);
+        return;
+      }
+      section.append(el('p', 'matchup-perspective', `Item owner: ${analysis.owner.name || 'Player'}`));
+      const focus = GodfieldLocalization.item(resolved.item.modelId, language());
+      section.append(el('p', 'matchup-note', [focus.elementLabel, ...(analysis.attack?.notes || []), analysis.availability.text].filter(Boolean).join(' · ')));
+      if (analysis.uncertainTeams) section.append(el('p', 'matchup-note', 'Team data unavailable: comparing other players.'));
+      for (const {mode, groups} of analysis.sections) {
+        const heading = mode === 'defenses' ? 'Possible enemy protection' : 'Enemy attacks to prepare for';
+        section.append(el('h3', '', analysis.uncertainTeams ? heading.replace('enemy', 'other players’').replace('Enemy', 'Other players’') : heading));
+        if (!groups.length) section.append(el('p', 'matchup-note', 'No active opponents.'));
+        for (const {player, rows, unknown, summary} of groups) {
+          const group = el('section', 'matchup-group');
+          group.append(el('h4', '', player.name || `Player ${player.id}`));
+          if (summary) group.append(el('p', 'matchup-summary', summary));
+          if (!player.itemsAvailable) group.append(el('p', 'matchup-note', 'Inventory unavailable; threats cannot be ruled out.'));
+          else if (!rows.length) group.append(el('p', 'matchup-note', mode === 'defenses' ? 'No compatible protection among revealed items.' : 'No attack items revealed.'));
+          const list = el('ul', 'matchup-list');
+          for (const row of rows) {
+            const info = GodfieldLocalization.item(row.item.modelId, language());
+            const li = el('li', `matchup-row ${row.verdict.kind}${row.availability.ready === false ? ' unavailable' : ''}`);
+            const img = el('img', 'matchup-art');
+            img.alt = ''; img.width = img.height = 32; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer';
+            img.src = info.image; img.onerror = () => { img.hidden = true; };
+            const text = el('div', 'matchup-text');
+            text.append(el('strong', 'matchup-name', info.name));
+            const stats = [info.elementLabel, ...info.stats, row.attack?.support ? 'Attack add-on' : '', info.hitRate ? `${info.hitRate}% base hit rate` : ''].filter(Boolean);
+            text.append(el('div', 'matchup-meta', stats.join(' · ')));
+            text.append(el('div', 'matchup-verdict', row.verdict.text));
+            if (row.availability.text) text.append(el('div', 'matchup-meta', row.availability.text));
+            if (mode === 'attacks' && Array.isArray(analysis.owner.curses) && analysis.owner.curses.includes('darkcloud') && info.hitRate) text.append(el('div', 'matchup-verdict', 'Dark Cloud: this attack hits certainly'));
+            li.append(img, text); list.append(li);
+          }
+          group.append(list);
+          if (unknown) group.append(el('p', 'matchup-note', `${unknown} concealed or unmapped ${unknown === 1 ? 'item' : 'items'}; more options may exist.`));
+          section.append(group);
+        }
+      }
+      section.append(el('p', 'matchup-note matchup-limit', 'Base item comparisons, not a damage forecast. Attack combinations, curses, guardians, and random effects can change the outcome.'));
     }
     function paint() {
       const resolved = resolve(active);
@@ -91,6 +152,7 @@
       content.replaceChildren();
       content.lang = language();
       popup.classList.toggle('single-item', Boolean(resolved.item));
+      popup.classList.remove('has-analysis');
       if (resolved.player) {
         const p = resolved.player;
         title.textContent = `${p.name || 'Player'} · ${p.items.length} ${p.items.length === 1 ? 'item' : 'items'}`;
@@ -115,6 +177,7 @@
           list.append(fake);
         }
         content.append(list);
+        paintAnalysis(resolved);
       }
       if (getState().fromCache) content.prepend(el('div', 'hover-stale', 'Cached snapshot · may be stale'));
       popup.hidden = false;
@@ -177,14 +240,16 @@
       if (pinned) cancelHide();
     };
     close.onclick = hide;
-    function bindCard(node, item) {
+    function bindCard(node, item, playerId) {
       node.tabIndex = 0;
+      if (active?.panel && active.playerId === playerId && active.item.id === item.id &&
+          active.item.modelId === item.modelId && !anchor?.isConnected) anchor = node;
       const enter = () => {
         if (pinned) return;
         request++;
         clearTimeout(showTimer);
         cancelHide();
-        showTimer = setTimeout(() => show({kind:'item',item}, node), 160);
+        showTimer = setTimeout(() => show({kind:'item',item,playerId,panel:true}, node), 160);
       };
       node.addEventListener('pointerenter', enter);
       node.addEventListener('pointerleave', deferHide);

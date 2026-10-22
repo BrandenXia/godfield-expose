@@ -23,7 +23,7 @@
     if (model.def) stats.push(locale.stats.def.replace('{{def}}', model.def));
     if (model.cost) stats.push(locale.stats.cost.replace('{{mp}}', model.cost));
     return {
-      ...model, name, stats,
+      ...model, name, stats, elementLabel: model.element ? locale.elements[model.element] : 'Non-element',
       categoryLabel: locale.categories[model.category],
       image: `https://godfield.net/images/items/${encodeURIComponent(model.category)}/${encodeURIComponent(model.imageName)}.webp`
     };

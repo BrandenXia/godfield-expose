@@ -5,7 +5,7 @@ God Field is an independent game available at [godfield.net](https://godfield.ne
 The following materials originate from God Field and remain the property of their respective owners:
 
 - Item names, translations, category labels, stat labels, and item metadata in `extension/catalog.js`, derived from the game's public `/i18n/<language>.json` catalogs.
-- The two original item sprites in `tests/assets/`, retained as offline browser-test fixtures. Their exact source URLs are listed in that directory's README.
+- The original item sprites in `tests/assets/`, retained as offline browser-test fixtures. Their exact source URLs are listed in that directory's README.
 - Original item artwork visible in the preview in `docs/images/`. The running extension loads artwork from the game's own public image URLs.
 
 Public availability of these files does not imply a separate license or ownership grant. This repository does not claim ownership of the game's name, translations, item designs, or artwork.

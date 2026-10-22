@@ -19,6 +19,9 @@
         id: integer(player.id) ?? index,
         name: label(player.name, `Player ${index + 1}`),
         alias: label(player.alias),
+        team: Number.isSafeInteger(player.team) && player.team >= 0 && player.team <= 4 ? player.team : null,
+        curses: Array.isArray(player.curses) ? player.curses.filter(curse =>
+          ['cold', 'fever', 'hell', 'heaven', 'fog', 'flash', 'dream', 'darkcloud'].includes(curse)).slice(0, 8) : [],
         hp: integer(player.hp), mp: integer(player.mp), cp: integer(player.cp),
         dead: player.dead === true,
         itemsAvailable: Array.isArray(player.items),

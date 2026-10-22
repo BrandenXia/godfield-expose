@@ -99,6 +99,26 @@
       .hover-preview { position: fixed; width: min(420px, calc(100vw - 16px)); background: #ddffcc;
         border: 2px solid #008f6f; border-radius: 12px; box-shadow: 0 6px 28px #003b3b55; overflow: hidden; }
       .hover-preview.single-item { width: min(310px, calc(100vw - 16px)); }
+      .hover-preview.has-analysis { width: min(440px, calc(100vw - 16px)); }
+      .matchups { padding: 0 10px 10px; }
+      .matchups h3 { font-size: 13px; color: #006a51; margin: 12px 0 6px; }
+      .matchup-perspective { font-size: 11px; font-weight: 700; margin: 6px 0; }
+      .matchup-note, .matchup-summary { font-size: 10px; margin: 5px 0; line-height: 1.5; }
+      .matchup-summary { color: #006a51; font-weight: 700; }
+      .matchup-group { border: 1px solid #55bb99; border-radius: 7px; margin: 6px 0; padding: 7px; background: #eeffee; }
+      .matchup-group h4 { margin: 0 0 4px; font-size: 12px; overflow-wrap: anywhere; }
+      .matchup-list { display: block; padding: 0; }
+      .matchup-row { display: flex; gap: 7px; padding: 7px 0; border-top: 1px solid #c7e8cf; text-align: left; }
+      .matchup-art { flex: 0 0 32px; object-fit: contain; align-self: flex-start; }
+      .matchup-text { min-width: 0; overflow-wrap: anywhere; }
+      .matchup-name { font-size: 11px; }
+      .matchup-meta { font-size: 10px; color: #527263; }
+      .matchup-verdict { font-size: 10px; font-weight: 700; color: #00795e; }
+      .partial .matchup-verdict, .bypass .matchup-verdict { color: #a74667; }
+      .conditional .matchup-verdict, .counter .matchup-verdict, .filter .matchup-verdict { color: #886b38; }
+      .unavailable { opacity: .65; }
+      .matchup-limit { padding-top: 5px; border-top: 1px solid #55bb99; color: #527263; }
+      .owner-select { width: 100%; max-width: 100%; }
       .hover-header { display: flex; gap: 6px; align-items: center; padding: 8px 10px; background: #008f6f; color: #eeffee; }
       .hover-title { flex: 1; overflow-wrap: anywhere; font-size: 13px; }
       .hover-button { border: 1px solid #ddffcc; border-radius: 5px; color: #008f6f; background: #eeffee; padding: 3px 7px; font-size: 11px; }
@@ -256,7 +276,7 @@
         if (!player.items.length) list.append(el('li', 'empty-items', player.itemsAvailable ? 'No items.' : 'Inventory was not included in this snapshot.'));
         for (const item of player.items) {
           const row = renderItem(item);
-          hover.bindCard(row, item);
+          hover.bindCard(row, item, player.id);
           list.append(row);
         }
         details.append(summary, list);

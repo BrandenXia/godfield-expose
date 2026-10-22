@@ -33,3 +33,17 @@ test('bounds strings and collections on the bridge', () => {
   assert.equal(result.players[0].name.length, 120);
   assert.equal(result.players[0].items.length, 64);
 });
+
+test('retains only bounded public team and curse fields for matchup analysis', () => {
+  const {players} = normalizeRoom({game:{players:[
+    {team:2,curses:['flash','darkcloud','secret',null],userId:'private'},
+    {team:0,curses:'flash'}, {team:99}, {}
+  ]}});
+  assert.equal(players[0].team,2);
+  assert.deepEqual(players[0].curses,['flash','darkcloud']);
+  assert.equal(players[1].team,0);
+  assert.deepEqual(players[1].curses,[]);
+  assert.equal(players[2].team,null);
+  assert.equal(players[3].team,null);
+  assert.ok(!JSON.stringify(players).includes('private'));
+});

@@ -10,7 +10,7 @@ The page exposes modular Firebase functions through `window.firebase`. The Dart 
 
 ```text
 room.game.players[]
-  id, name, alias, hp, mp, cp, dead
+  id, name, alias, team, hp, mp, cp, dead, curses[]
   items[]
     id, modelId, fakeModelId, used
 room.game.updateCount
@@ -60,6 +60,19 @@ In a live Training game, hovering the opposing bot’s native name tag displayed
 Deterministic browser fixtures use the observed Dart callback/view structure to test dream previews: two native cards have the same apparent model but different real models, and each preview shows the correct real item. The tests also cover duplicate player names, reordered cards, item updates, absent/stale items, node removal, room exit, keyboard navigation, pinning, and unchanged game click handling. These fixtures establish adapter/UI behavior rather than exposure in additional game modes.
 
 Native hover support depends on the current compiled client’s field layout. If that layout changes, the full inventory panel remains the fallback. Browser profiles and diagnostic traces from the live check are not published.
+
+## Combat analysis (October 22, 2026)
+
+Version 0.4.0 adds comparisons from the real hovered item owner’s perspective. The snapshot adapter additionally retains bounded public team numbers (0–4) and recognized curse names. Team 0 means solo; players on the same nonzero team and eliminated players are excluded. Missing team data remains unknown. No account identifiers are needed to identify an item’s owner; ambiguous native item matches require explicit selection.
+
+The public [English catalog](https://godfield.net/i18n/en.json) and [compiled client](https://godfield.net/main.dart.js) were checked again. Their item metadata and the client fingerprint match the earlier investigation. Relevant rules:
+
+- `texts.elementDescriptions` defines opposite defenses for fire/water and wood/stone, light bypass, and darkness causing HP 0 when damage gets through. `texts.reference.lightNote` permits light defense as a substitute.
+- `A.aN.kO` checks ordinary defense eligibility. `A.aN.e1` selects reflection, bouncing, or blocking by attack category; weapon-specific effects require a non-elemental attack. `reflectAnything` applies regardless of category.
+- `ev` restricts selection under Flash, permits element-filtering responses, and permits a cost-waiver item immediately after a miracle. `A.la` calculates miracle costs with that waiver. The official reference says performed miracles are reusable.
+- `A.tw` and `A.l9` show how attack additions and element combinations can change a result. This release deliberately evaluates base items rather than enumerating those combinations. Add-on-only items and filter/counter effects are labeled conditional instead of treated as guaranteed protection.
+
+Unit tests exercise ordinary and special defenses, elemental exceptions, darkness, counters, current-MP attack strength, Flash, MP shortages, cost-waiver conditions, solo/team filtering, and concealed data. Chromium fixtures cover both distributions, native dream cards, owner ambiguity, translated names, live snapshot updates, pinned panel previews, and viewport bounds. No new live combat outcome or server damage calculation was tested for this feature.
 
 ## Confidentiality implication
 

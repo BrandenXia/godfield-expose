@@ -44,11 +44,25 @@ The userscript is self-contained, runs only on `https://godfield.net/*`, and nee
 
 - **Player name tags:** hover a native name tag to see that player’s items and HP/MP/CP. The preview follows the tag and updates with received room snapshots.
 - **Dream items:** hover a disguised game card to compare its real item with its dream appearance, side by side. Cards with identical appearances are resolved from their own item data.
+- **Combat matchups:** attack previews show each opponent’s compatible defenses; protection previews show enemy attacks and whether that protection covers them. Dual-purpose items show both.
 - **Keep a preview open:** move into it to inspect the cards, or select **Pin**. Select **×** or press **Esc** to dismiss it.
 - **Keyboard:** tab to a player tag or card for its preview. **Alt+I** toggles the full inspector.
 - **Full inspector:** select **+** at the lower right to browse every player, change the item language, or save JSON. Its cards also offer hover previews with full names.
 
 <img src="docs/images/hover-player.png" alt="Hovering an opponent’s name tag in Training shows their nine-item hand beside the game" width="800">
+
+## Combat matchup analysis
+
+Hover a native game card or a card in the expanded inspector. Beneath its artwork, the preview compares the real item with the other hands already received by your tab:
+
+- **Attack items:** compatible protection grouped by opponent, including ordinary DEF, reflection, bouncing, blocking, counters, and element filtering. A summary shows combined compatible DEF, or the best single defense when Flash limits the defender to one item.
+- **Protection items:** revealed weapon attacks, offensive miracles, and attack add-ons, including attacks that bypass the hovered protection. Results distinguish full coverage, partial coverage, incompatible elements, and effects that need a combination.
+- **Availability:** MP costs and insufficient MP are shown; a cost-waiver item is marked as conditional. Performed miracles remain usable. Eliminated players and known teammates are excluded.
+- **Identity:** comparisons use the hovered item’s owner, shown above the results. Inspector cards carry an explicit owner. If a native card matches multiple hands, choose its owner instead of guessing. Missing team or inventory data is labeled.
+
+Names and element labels follow the selected item language; analysis explanations remain in English. Pinned previews refresh as inventories, MP, and curses change.
+
+These are **base item comparisons**, not a damage forecast or exhaustive search of combinations. They cover elemental compatibility, category-specific reflection/blocking, darkness lethality, and the Flash defense limit. Attack combinations, direct HP-changing effects, most curse/guardian interactions, and random or conditional effects are not simulated. Counter items do not imply damage prevention. Concealed or unmapped items can hide additional options. Rules are based on the current public client and official catalog; see [the investigation](docs/investigation.md#combat-analysis-october-22-2026).
 
 ## Item languages and artwork
 
@@ -78,6 +92,8 @@ All players are shown, including you. Player IDs are game-local indices; the ext
 
 The userscript bundles the same source files and catalogs into one file. Its hook and shadow DOM panel both run in the page's MAIN world; the extension retains its isolated panel.
 
+`matchups.js` compares item metadata with received inventories, team assignments, MP, and recognized curses.
+
 `targets.js` associates native player tags and cards with their Dart view data; `hover.js` validates those associations against the received snapshot and renders previews. It does not identify cards by their image or screen order. This adapter depends on the current compiled client’s view layout; if a site update breaks native hover previews, the full inspector remains available.
 
 The hook depends on the public `window.firebase` bridge and current room schema. It is not compatible with native mobile apps. If the panel stays at “Game hook not ready,” enable the extension before reloading. If it reports an unrecognized format, the site's schema may have changed. If opponents show unknown items, their real IDs were not received; this is not an installation error.
@@ -100,7 +116,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-The browser tests load the unpacked extension into a temporary Chromium profile and delete that profile afterward. They check both JavaScript worlds, UI behavior, and exports. Screenshots are in `test-results/inspector.png` and `test-results/inspector-mobile.png`. They also check all eight languages, automatic locale changes, manual overrides, successful image loading, and broken-image fallback. Hover tests cover native player/card association, duplicate names, identical dream appearances, reordered cards, pinning, keyboard access, live updates, stale data, click passthrough, room cleanup, and narrow-screen positioning. Hover screenshots are saved alongside the panel screenshots.
+The browser tests load the unpacked extension into a temporary Chromium profile and delete that profile afterward. They check both JavaScript worlds, UI behavior, and exports. Screenshots are in `test-results/inspector.png` and `test-results/inspector-mobile.png`. They also check all eight languages, automatic locale changes, manual overrides, successful image loading, and broken-image fallback. Hover tests cover native player/card association, duplicate names, identical dream appearances, reordered cards, pinning, keyboard access, live updates, stale data, click passthrough, room cleanup, and narrow-screen positioning. Hover screenshots are saved alongside the panel screenshots. Matchup checks cover teams, MP changes, reusable miracles, ambiguous ownership, translated names, pinned updates, and mobile layout; screenshots use the `matchups-` prefix.
 
 Run the same browser checks against the generated userscript, or run the extension and userscript suites in sequence:
 

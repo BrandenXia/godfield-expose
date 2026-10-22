@@ -11,7 +11,7 @@ languages = ['en', 'fr', 'ja', 'ko', 'pt', 'ru', 'zh-hans', 'zh-hant']
 source = Path(sys.argv[1])
 raw = {lang: json.loads((source / f'{lang}.json').read_text()) for lang in languages}
 english = raw['en']['items']
-fields = ('imageName', 'category', 'atk', 'isPlusAtk', 'def', 'cost', 'price', 'ability', 'abilityValue', 'element')
+fields = ('imageName', 'category', 'atk', 'isPlusAtk', 'def', 'cost', 'price', 'ability', 'abilityValue', 'element', 'hitRate', 'curse')
 catalog = {'models': [{k: item[k] for k in fields if k in item} for item in english], 'languages': {}}
 for lang, data in raw.items():
     assert len(data['items']) == len(english), f'{lang}: item count changed'
@@ -21,6 +21,7 @@ for lang, data in raw.items():
         'label': data['texts']['langNames'][lang],
         'names': [item['name'] for item in data['items']],
         'categories': {key: data['texts']['reference'][key] for key in sorted({i['category'] for i in english})},
+        'elements': data['texts']['elementNames'],
         'stats': {key: data['texts']['game'][key].replace('<br>', ' ') for key in ('atk', 'plusAtk', 'def', 'cost', 'cp')}
     }
 output = Path(__file__).resolve().parents[1] / 'extension/catalog.js'
