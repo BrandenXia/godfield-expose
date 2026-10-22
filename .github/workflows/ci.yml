@@ -24,12 +24,17 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm test
-      - run: npm run test:browser
+      - run: npm run check:userscript
+      - run: npm run test:browser:all
       - run: npm run package
       - uses: actions/upload-artifact@v4
         with:
           name: extension
           path: dist/*.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: userscript
+          path: dist/*.user.js
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

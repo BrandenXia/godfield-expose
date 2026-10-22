@@ -3,16 +3,21 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const os = require('node:os');
-(async () => {
+async function runHoverTest(mode) {
   const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'godfield-hover-test-'));
+  const userscript = mode === 'userscript';
+  const screenshotSuffix = userscript ? '-userscript' : '';
   let context;
   try {
     const extension = path.resolve(__dirname, '../extension');
     context = await chromium.launchPersistentContext(profile, {
       channel:'chromium', headless:true,
-      args:[`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
+      args:userscript ? ['--disable-extensions'] : [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
       viewport:{width:1280,height:900}
     });
+    if (userscript) {
+      await context.addInitScript({path:path.resolve(__dirname,'../userscript/godfield-room-inspector.user.js')});
+    }
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -106,7 +111,7 @@ const os = require('node:os');
     await popup.getByText('Real item',{exact:true}).waitFor();
     await popup.getByText('Dream appearance',{exact:true}).waitFor();
     await fs.mkdir('test-results',{recursive:true});
-    await page.screenshot({path:'test-results/hover-dream.png'});
+    await page.screenshot({path:`test-results/hover-dream${screenshotSuffix}.png`});
     await page.keyboard.press('Escape');
     await page.evaluate(()=>{
       native[7].a.style.left='210px';native[8].a.style.left='100px';
@@ -137,16 +142,26 @@ const os = require('node:os');
     await page.waitForTimeout(50);
     const rect=await popup.boundingBox();
     assert.ok(rect.x>=0 && rect.y>=0 && rect.x+rect.width<=360 && rect.y+rect.height<=600);
-    await page.screenshot({path:'test-results/hover-mobile.png'});
+    await page.screenshot({path:`test-results/hover-mobile${screenshotSuffix}.png`});
     await page.evaluate(()=>deliver({data:()=>({game:null})}));
     await popup.waitFor({state:'hidden'});
     // Full panel still has a keyboard shortcut and translated card previews.
     await page.keyboard.press('Alt+i');
     await inspector.getByRole('button',{name:'Collapse inspector'}).waitFor();
     assert.deepEqual(errors,[]);
-    console.log('PASS: native player/card association, duplicate names, identical dream appearances, sorted cards, keyboard access, pinning, live updates, stale-data rejection, click passthrough, DOM removal, room cleanup and viewport clamping.');
+    console.log(`PASS (${userscript ? 'userscript bundle fixture' : 'real MV3 injection'}): native player/card association, duplicate names, identical dream appearances, sorted cards, keyboard access, pinning, live updates, stale-data rejection, click passthrough, DOM removal, room cleanup and viewport clamping.`);
   } finally {
     await context?.close();
     await fs.rm(profile,{recursive:true,force:true});
   }
+}
+
+(async () => {
+  const args = process.argv.slice(2);
+  if (args.length > 1 || (args.length === 1 && !['--userscript', '--all'].includes(args[0]))) {
+    throw new Error('Usage: node scripts/hover-test.cjs [--userscript|--all]');
+  }
+  const modes = args[0] === '--all' ? ['extension', 'userscript'] :
+    [args[0] === '--userscript' ? 'userscript' : 'extension'];
+  for (const mode of modes) await runHoverTest(mode);
 })().catch(error=>{console.error(error);process.exitCode=1;});
