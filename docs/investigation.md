@@ -74,6 +74,16 @@ The public [English catalog](https://godfield.net/i18n/en.json) and [compiled cl
 
 Unit tests exercise ordinary and special defenses, elemental exceptions, darkness, counters, current-MP attack strength, Flash, MP shortages, cost-waiver conditions, solo/team filtering, and concealed data. Chromium fixtures cover both distributions, native dream cards, owner ambiguity, translated names, live snapshot updates, pinned panel previews, and viewport bounds. No new live combat outcome or server damage calculation was tested for this feature.
 
+## Direct dream and fog presentation (October 22, 2026)
+
+Version 0.5.0 replaces the dream comparison popover with native card reveals. `visibility.js` recognizes the current item-view prototype (`A.aC`), replaces its disguise artwork with the known real model’s artwork, clears only the local disguise-view fields, and refreshes native stats. The ordinary `gL()` model selection then uses the real model for details, sorting, and item selection. Clearing the removed disguise wrapper also prevents later reveal animations from using a detached element. Original snapshot `modelId`/`fakeModelId` fields and item instance IDs remain unchanged.
+
+For the current player-view prototype (`A.c5`), fog masking (`em`) and fog transitions (`aI`) are routed through the native reveal path. The underlying status nodes stay attached, and already available targeting buttons are kept on the visible nameplate. This does not create target buttons outside the game's normal selection phase. The fog screen image is hidden with a scoped style. Existing curse records, command construction, and command submission are not patched.
+
+The public client’s `A.jQ` command path submits `targetPlayerId`; the official fog description says enemy targeting is random while fog is active. Restoring a visible, selectable nameplate therefore does **not** establish that the server honors the chosen target. Server-side fog removal is outside this implementation.
+
+Browser fixtures for both distributions verify native artwork/stats, real-name fallback, original snapshot identity and curse preservation, unchanged item clicks, repeated fog transitions, updated status text, active/inactive target buttons, and unsupported views. In an isolated live Training session, a disguise was simulated on an actual native item view and fog was requested on an actual opponent view. The real artwork/stats appeared, the opponent status stayed visible, and its existing target button could be clicked without a page error. No attack was submitted. This verifies the native presentation path, not a naturally occurring dream/fog event or the server’s target resolution. The adapter depends on the current compiled client’s view layout and method names.
+
 ## Confidentiality implication
 
 In the tested private mode, both clients receive the same stored player array, including opponents' real model IDs. Keeping those items secret requires omitting them from shared participant-readable data; hiding them in the UI does not remove data already delivered to a client.

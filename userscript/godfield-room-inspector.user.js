@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         God Field Room Inspector
 // @namespace    https://github.com/BrandenXia/godfield-expose
-// @version      0.4.0
+// @version      0.5.0
 // @description  Show player items present in the room snapshots your God Field client receives.
 // @homepageURL  https://github.com/BrandenXia/godfield-expose
 // @supportURL   https://github.com/BrandenXia/godfield-expose/issues
@@ -21,11 +21,106 @@
   // Keep CommonJS detection in shared sources independent of page globals.
   const module = undefined;
 
+// Source: extension/visibility.js
+(() => {
+  'use strict';
+  // This adapter changes the current client's view objects only. Room snapshots,
+  // curse records, item instance IDs, and command submission remain untouched.
+  const own = (object, key) => object && Object.getOwnPropertyDescriptor(object, key)?.value;
+  const node = value => value instanceof Element;
+  const itemPrototypes = new WeakSet(), playerPrototypes = new WeakSet();
+  function methods(prototype, names) {
+    return prototype && names.every(name => typeof own(prototype, name) === 'function');
+  }
+  function replace(prototype, name, wrapper) {
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
+    Object.defineProperty(prototype, name, {...descriptor, value:wrapper(descriptor.value)});
+  }
+  function revealItem(view) {
+    const real = own(view, 'e'), fake = own(view, 'f'), root = own(view, 'a');
+    const disguise = own(own(view, 'r'), 'a');
+    const category = own(own(real, 'd'), 'c'), imageName = own(real, 'c');
+    if (!fake || !node(root) || !node(disguise) || !root.contains(disguise) ||
+        !Number.isSafeInteger(own(real, 'a')) || own(real, 'a') <= 0 ||
+        !['trade','weapons','armor','sundries','miracles','devils','guardians','phenomena'].includes(category) ||
+        typeof imageName !== 'string' || !/^[a-z0-9-]+$/.test(imageName)) return;
+    const art = document.createElement('div');
+    art.dataset.gfiRealArt = String(real.a);
+    Object.assign(art.style, {position:'absolute',left:'0',top:'0',width:'80px',height:'80px',pointerEvents:'none'});
+    const fallback = document.createElement('span');
+    fallback.textContent = typeof own(real, 'b') === 'string' ? real.b : `Item #${real.a}`;
+    Object.assign(fallback.style, {display:'grid',placeItems:'center',width:'80px',height:'80px',fontSize:'12px',textAlign:'center',overflowWrap:'anywhere',color:'#17604e',background:'#eeffee'});
+    const image = document.createElement('img');
+    image.alt = fallback.textContent;
+    image.width = image.height = 80;
+    image.referrerPolicy = 'no-referrer';
+    Object.assign(image.style, {position:'absolute',left:'0',top:'0',width:'80px',height:'80px'});
+    image.onload = () => { fallback.style.display = 'none'; };
+    image.onerror = () => { image.hidden = true; fallback.style.display = 'grid'; };
+    image.src = `https://godfield.net/images/items/${category}/${encodeURIComponent(imageName)}.webp`;
+    art.append(fallback, image);
+    root.querySelectorAll('[data-gfi-real-art]').forEach(old => old.remove());
+    root.insertBefore(art, root.firstChild);
+    disguise.remove();
+    // gL() now uses the real model for native stats, details and item selection.
+    // Clearing r also prevents the game from animating a removed disguise later.
+    view.f = view.r = null;
+    root.dataset.gfiRevealed = 'true';
+    try { view.bH(); } catch { /* Native initialization will refresh stats again. */ }
+  }
+  function revealPlayer(view, original) {
+    const button = own(own(view, 'dy'), 'a');
+    const hadTarget = node(button) && button.parentNode !== null;
+    const result = Reflect.apply(original, view, [false]);
+    const plate = own(own(view, 'Q'), 'a');
+    if (hadTarget && node(plate) && !own(view, 'a').contains(button)) plate.append(button);
+    own(view, 'a').dataset.gfiFogVisible = 'true';
+    return result;
+  }
+  function observe(view, kind) {
+    try {
+      const prototype = Object.getPrototypeOf(view);
+      if (kind === 'item' && methods(prototype, ['hn','gL','bH','dk'])) {
+        if (!itemPrototypes.has(prototype)) {
+          replace(prototype, 'hn', original => function (...args) {
+            const result = Reflect.apply(original, this, args);
+            try { revealItem(this); } catch { /* Preserve native initialization. */ }
+            return result;
+          });
+          itemPrototypes.add(prototype);
+        }
+        // The first registration occurs partway through hn(); finish it first.
+        queueMicrotask(() => { try { revealItem(view); } catch {} });
+      }
+      if (kind === 'player' && methods(prototype, ['em','aI','si2','fs','iT']) &&
+          node(own(own(view, 'y'), 'a')) && node(own(own(view, 'z'), 'a'))) {
+        if (!playerPrototypes.has(prototype)) {
+          replace(prototype, 'em', original => function () { return revealPlayer(this, original); });
+          // Keep the native Dart Future and animation lifecycle, always revealing.
+          replace(prototype, 'aI', original => function () { return Reflect.apply(original, this, [false]); });
+          playerPrototypes.add(prototype);
+        }
+        queueMicrotask(() => { try { if (own(view, 'CW')) view.em(false); } catch {} });
+      }
+    } catch { /* Unknown client shapes leave the native UI intact. */ }
+  }
+  function style() {
+    const sheet = document.createElement('style');
+    sheet.id = 'godfield-visibility-style';
+    sheet.textContent = '#main img[src$="images/screens/fog.webp"] { visibility: hidden !important; pointer-events: none !important; }';
+    document.documentElement.append(sheet);
+  }
+  if (document.documentElement) style();
+  else document.addEventListener('DOMContentLoaded', style, {once:true});
+  globalThis.GodfieldVisibility = Object.freeze({observe});
+})();
+
 // Source: extension/targets.js
 (() => {
   'use strict';
   // The current Dart client stores a view behind each interop event callback.
-  // Read only own data fields: never invoke a callback, getter, or game command.
+  // Inspect own data fields without invoking event callbacks or game commands.
+  // The visibility adapter separately updates supported native view objects.
   const own = (object, key) => object && Object.getOwnPropertyDescriptor(object, key)?.value;
   const element = value => value instanceof Element;
   function decode(view) {
@@ -71,6 +166,7 @@
             if (!node.hasAttribute('tabindex')) node.setAttribute('tabindex', '0');
           }
           views.set(node, view);
+          GodfieldVisibility.observe(view, decode(view).kind);
         }
       } catch { /* Unsupported client layouts keep the full inventory panel. */ }
     }
@@ -494,11 +590,10 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
         if (!item || !Number.isSafeInteger(item.id) || !Number.isSafeInteger(item.modelId)) return null;
         // Validate against received data. Identical disguise images never identify
         // a card: its native view supplies the real model and instance ID.
-        const owners = state.players.filter(p => p.items.some(i => i.id === item.id &&
-          i.modelId === item.modelId && (i.fakeModelId || 0) === (item.fakeModelId || 0)));
+        const owners = state.players.filter(p => p.items.some(i => i.id === item.id && i.modelId === item.modelId));
         const owner = target.playerId !== undefined ? owners.find(p => p.id === target.playerId) : owners.length === 1 ? owners[0] : null;
         if (target.playerId !== undefined && !owner) return null;
-        const match = (owner || owners[0])?.items.find(i => i.id === item.id && i.modelId === item.modelId && (i.fakeModelId || 0) === (item.fakeModelId || 0));
+        const match = (owner || owners[0])?.items.find(i => i.id === item.id && i.modelId === item.modelId);
         return match && { item: match, owner, owners };
       }
       return null;
@@ -580,18 +675,10 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
         content.append(list);
       } else {
         const item = resolved.item;
-        const disguised = item.fakeModelId > 0;
-        title.textContent = disguised ? 'Dream · real item' : 'Item details';
+        title.textContent = 'Item details';
         const list = el('ul', 'hover-items comparison');
         const real = renderItem(item);
-        real.querySelector('.fake')?.remove();
-        if (disguised) real.prepend(el('div', 'reveal-label', 'Real item'));
         list.append(real);
-        if (disguised) {
-          const fake = renderItem({modelId:item.fakeModelId});
-          fake.prepend(el('div', 'reveal-label apparent', 'Dream appearance'));
-          list.append(fake);
-        }
         content.append(list);
         paintAnalysis(resolved);
       }
@@ -773,7 +860,6 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       .item-stat { font-size: 10px; font-weight: 800; color: #a74667; background: #fff0cf; border-radius: 3px; padding: 0 4px; }
       .unknown .item-name { color: #886b38; } .used .art { opacity: .5; }
       .used-label { position: absolute; top: 4px; left: 4px; color: #886b38; background: #fff0cf; font-size: 9px; padding: 0 3px; border-radius: 3px; }
-      .fake { color: #886b38; background: #fff0cf; border-radius: 3px; font-size: 9px; margin-top: 5px; padding: 3px; overflow-wrap: anywhere; }
       .empty-items { grid-column: 1 / -1; padding: 12px; color: #eeffee; font-size: 12px; }
       footer { padding: 8px 12px; background: #008f6f; color: #eeffee; display: flex; gap: 10px; align-items: center; border-top: 2px solid #eeffee; }
       .note { color: #ddffcc; font-size: 10px; flex: 1; } .export { background: #eeffee; color: #008f6f;
@@ -812,9 +898,6 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       .hover-stale { padding: 6px 10px; color: #886b38; background: #fff0cf; font-size: 11px; }
       .hover-preview .item-name { display: block; -webkit-line-clamp: unset; overflow: visible; }
       .hover-preview .comparison { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
-      .reveal-label { margin: -7px -6px 6px; padding: 5px 2px; background: #008f6f; color: #eeffee; font-size: 11px; font-weight: 700; }
-      .reveal-label.apparent { background: #ddbb77; color: #4f4f4f; }
-      .comparison .id { top: 33px; }
       .hover-preview .empty-items { color: #17604e; }
       .card:focus-visible { outline: 3px solid #ffd567; outline-offset: -3px; }
       @media (max-width: 380px) { ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } h2 { font-size: 17px; } }
@@ -916,9 +999,6 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
         const itemStats = el('div', 'item-stats');
         for (const stat of info.stats) itemStats.append(el('span', 'item-stat', stat));
         row.append(itemStats);
-      }
-      if (Number.isSafeInteger(item.fakeModelId) && item.fakeModelId > 0) {
-        row.append(el('div', 'fake', `Displayed as: ${model(item.fakeModelId)?.name ?? `item #${item.fakeModelId}`}`));
       }
       return row;
     };

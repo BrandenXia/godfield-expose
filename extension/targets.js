@@ -1,7 +1,8 @@
 (() => {
   'use strict';
   // The current Dart client stores a view behind each interop event callback.
-  // Read only own data fields: never invoke a callback, getter, or game command.
+  // Inspect own data fields without invoking event callbacks or game commands.
+  // The visibility adapter separately updates supported native view objects.
   const own = (object, key) => object && Object.getOwnPropertyDescriptor(object, key)?.value;
   const element = value => value instanceof Element;
   function decode(view) {
@@ -47,6 +48,7 @@
             if (!node.hasAttribute('tabindex')) node.setAttribute('tabindex', '0');
           }
           views.set(node, view);
+          GodfieldVisibility.observe(view, decode(view).kind);
         }
       } catch { /* Unsupported client layouts keep the full inventory panel. */ }
     }

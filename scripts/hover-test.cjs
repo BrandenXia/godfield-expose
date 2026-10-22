@@ -105,11 +105,10 @@ async function runHoverTest(mode) {
     await page.keyboard.press('Escape');
     // Two identical dream appearances resolve to different real models.
     await page.locator('#item-7').hover();
-    await popup.getByText('Dream · real item',{exact:true}).waitFor();
+    await popup.getByText('Item details',{exact:true}).waitFor();
     await popup.getByText('Crossbow',{exact:true}).waitFor();
-    await popup.getByText('Exchange',{exact:true}).waitFor();
-    await popup.getByText('Real item',{exact:true}).waitFor();
-    await popup.getByText('Dream appearance',{exact:true}).waitFor();
+    assert.equal(await popup.getByText('Dream appearance',{exact:true}).count(),0);
+    assert.equal(await popup.locator('.comparison .card').count(),1);
     await fs.mkdir('test-results',{recursive:true});
     await page.screenshot({path:`test-results/hover-dream${screenshotSuffix}.png`});
     await page.keyboard.press('Escape');

@@ -2,7 +2,7 @@
 
 [![Checks](https://github.com/BrandenXia/godfield-expose/actions/workflows/ci.yml/badge.svg)](https://github.com/BrandenXia/godfield-expose/actions/workflows/ci.yml)
 
-A Chrome/Edge Manifest V3 extension and Tampermonkey userscript that display player inventories present in the God Field room snapshots your tab already receives. They show a God Field-style grid of original item images, translated names and stats, model IDs, fake-item display IDs, and unavailable/concealed items.
+A Chrome/Edge Manifest V3 extension and Tampermonkey userscript that display player inventories present in the God Field room snapshots your tab already receives. They show a God Field-style grid of original item images, translated names and stats, model IDs, and unavailable/concealed items. Dream cards display their real item directly, and fog no longer hides native opponent status tags.
 
 **Verified:** in a controlled private match, two separate test clients received identical full nine-item hands for both players. Training mode also exposed the opposing bot's hand. Ranked duels were not tested.
 
@@ -43,7 +43,8 @@ The userscript is self-contained, runs only on `https://godfield.net/*`, and nee
 ## Hover previews
 
 - **Player name tags:** hover a native name tag to see that player’s items and HP/MP/CP. The preview follows the tag and updates with received room snapshots.
-- **Dream items:** hover a disguised game card to compare its real item with its dream appearance, side by side. Cards with identical appearances are resolved from their own item data.
+- **Dream items:** the native card directly shows the real artwork and stats. No dream comparison popover is needed; ordinary item hover still shows combat matchups. A missing sprite falls back to the real item name.
+- **Fog:** opponent name tags, HP/MP/money, and the game’s available target buttons remain visible. Fog’s visual screen overlay is hidden. **The server may still randomize the target while the fog curse is active.**
 - **Combat matchups:** attack previews show each opponent’s compatible defenses; protection previews show enemy attacks and whether that protection covers them. Dual-purpose items show both.
 - **Keep a preview open:** move into it to inspect the cards, or select **Pin**. Select **×** or press **Esc** to dismiss it.
 - **Keyboard:** tab to a player tag or card for its preview. **Alt+I** toggles the full inspector.
@@ -70,14 +71,13 @@ These are **base item comparisons**, not a damage forecast or exhaustive search 
 
 English, Français, 日本語, 한국어, Português, Русский, 简体中文, 繁體中文.
 
-All 296 item names, category labels, and stat labels come from the game's official catalogs, bundled in all eight languages. Names on disguised items are translated too. Extension controls and status messages remain in English.
+All 296 item names, category labels, and stat labels come from the game's official catalogs, bundled in all eight languages. Revealed dream items use the real item’s translated name. Extension controls and status messages remain in English.
 
 The panel uses the game's mint/green palette and displays a three-column card grid (two columns on narrow screens). Item artwork loads lazily from the original `godfield.net/images/items/` URLs. A missing image shows a question mark while retaining the item name. Concealed IDs do not borrow the disguise's image or imply a known real item. Hover or focus a card for a preview with its full name.
 
 ## Reading the panel
 
 - Item name and `#ID`: the received **real `modelId`**, resolved against the selected official language catalog.
-- **Displayed as**: the received `fakeModelId` used by the game to present a disguised item.
 - **Unknown / concealed item**: no positive real model ID was provided. The extension does not infer one from the fake ID.
 - **Unmapped item**: the server provided an ID missing from the bundled catalog.
 - **Unavailable**: the snapshot omitted that player's item array. This is different from an empty inventory.
@@ -88,11 +88,13 @@ All players are shown, including you. Player IDs are game-local indices; the ext
 
 ## How it works
 
-`hook.js` observes the existing Firebase room listener in the page's MAIN world. `snapshot.js` copies only the required game fields. The isolated `panel.js` renders these fields in a shadow DOM panel. The extension makes no extra database requests, modifies no game data, and has no telemetry or automatic storage. Bundled catalogs supply 296 item names in eight languages without additional catalog requests. `locale-hook.js` observes successful game catalog fetches without reading response bodies or changing the returned promise. Original item images load from God Field as needed; the extension never sends inventory snapshots to another service.
+`hook.js` observes the existing Firebase room listener in the page's MAIN world. `snapshot.js` copies only the required game fields. The isolated `panel.js` renders these fields in a shadow DOM panel. The extension makes no extra database requests or server writes and has no telemetry or automatic storage. The game receives its original snapshots; only supported local view objects are adjusted for visibility. Bundled catalogs supply 296 item names in eight languages without additional catalog requests. `locale-hook.js` observes successful game catalog fetches without reading response bodies or changing the returned promise. Original item images load from God Field as needed; the extension never sends inventory snapshots to another service.
 
 The userscript bundles the same source files and catalogs into one file. Its hook and shadow DOM panel both run in the page's MAIN world; the extension retains its isolated panel.
 
 `matchups.js` compares item metadata with received inventories, team assignments, MP, and recognized curses.
+
+`visibility.js` reveals known dream items in their native cards and suppresses native fog masking. It preserves received curse/item records and the game’s existing command handlers. It neither removes server-side curses nor guarantees a chosen target under fog. Unknown client view layouts are left alone.
 
 `targets.js` associates native player tags and cards with their Dart view data; `hover.js` validates those associations against the received snapshot and renders previews. It does not identify cards by their image or screen order. This adapter depends on the current compiled client’s view layout; if a site update breaks native hover previews, the full inspector remains available.
 
@@ -116,7 +118,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-The browser tests load the unpacked extension into a temporary Chromium profile and delete that profile afterward. They check both JavaScript worlds, UI behavior, and exports. Screenshots are in `test-results/inspector.png` and `test-results/inspector-mobile.png`. They also check all eight languages, automatic locale changes, manual overrides, successful image loading, and broken-image fallback. Hover tests cover native player/card association, duplicate names, identical dream appearances, reordered cards, pinning, keyboard access, live updates, stale data, click passthrough, room cleanup, and narrow-screen positioning. Hover screenshots are saved alongside the panel screenshots. Matchup checks cover teams, MP changes, reusable miracles, ambiguous ownership, translated names, pinned updates, and mobile layout; screenshots use the `matchups-` prefix.
+The browser tests load the unpacked extension into a temporary Chromium profile and delete that profile afterward. They check both JavaScript worlds, UI behavior, and exports. Screenshots are in `test-results/inspector.png` and `test-results/inspector-mobile.png`. They also check all eight languages, automatic locale changes, manual overrides, successful image loading, and broken-image fallback. Hover tests cover native player/card association, duplicate names, identical dream appearances, reordered cards, pinning, keyboard access, live updates, stale data, click passthrough, room cleanup, and narrow-screen positioning. Hover screenshots are saved alongside the panel screenshots. Matchup checks cover teams, MP changes, reusable miracles, ambiguous ownership, translated names, pinned updates, and mobile layout; screenshots use the `matchups-` prefix. Native visibility fixtures verify direct dream artwork/stats, original snapshot preservation, item clicks, fog transitions, status updates, target availability, image fallback, and unsupported view layouts. Their screenshots use the `native-visibility` prefix.
 
 Run the same browser checks against the generated userscript, or run the extension and userscript suites in sequence:
 

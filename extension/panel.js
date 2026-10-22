@@ -89,7 +89,6 @@
       .item-stat { font-size: 10px; font-weight: 800; color: #a74667; background: #fff0cf; border-radius: 3px; padding: 0 4px; }
       .unknown .item-name { color: #886b38; } .used .art { opacity: .5; }
       .used-label { position: absolute; top: 4px; left: 4px; color: #886b38; background: #fff0cf; font-size: 9px; padding: 0 3px; border-radius: 3px; }
-      .fake { color: #886b38; background: #fff0cf; border-radius: 3px; font-size: 9px; margin-top: 5px; padding: 3px; overflow-wrap: anywhere; }
       .empty-items { grid-column: 1 / -1; padding: 12px; color: #eeffee; font-size: 12px; }
       footer { padding: 8px 12px; background: #008f6f; color: #eeffee; display: flex; gap: 10px; align-items: center; border-top: 2px solid #eeffee; }
       .note { color: #ddffcc; font-size: 10px; flex: 1; } .export { background: #eeffee; color: #008f6f;
@@ -128,9 +127,6 @@
       .hover-stale { padding: 6px 10px; color: #886b38; background: #fff0cf; font-size: 11px; }
       .hover-preview .item-name { display: block; -webkit-line-clamp: unset; overflow: visible; }
       .hover-preview .comparison { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
-      .reveal-label { margin: -7px -6px 6px; padding: 5px 2px; background: #008f6f; color: #eeffee; font-size: 11px; font-weight: 700; }
-      .reveal-label.apparent { background: #ddbb77; color: #4f4f4f; }
-      .comparison .id { top: 33px; }
       .hover-preview .empty-items { color: #17604e; }
       .card:focus-visible { outline: 3px solid #ffd567; outline-offset: -3px; }
       @media (max-width: 380px) { ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } h2 { font-size: 17px; } }
@@ -232,9 +228,6 @@
         const itemStats = el('div', 'item-stats');
         for (const stat of info.stats) itemStats.append(el('span', 'item-stat', stat));
         row.append(itemStats);
-      }
-      if (Number.isSafeInteger(item.fakeModelId) && item.fakeModelId > 0) {
-        row.append(el('div', 'fake', `Displayed as: ${model(item.fakeModelId)?.name ?? `item #${item.fakeModelId}`}`));
       }
       return row;
     };

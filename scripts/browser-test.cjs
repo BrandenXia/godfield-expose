@@ -82,7 +82,7 @@ async function runBrowserTest(mode) {
     await panel.getByText('Live room snapshot', { exact: true }).waitFor();
     await panel.getByText('Unknown / concealed item').waitFor();
     await panel.getByText('Unmapped item #9999').waitFor();
-    await panel.getByText('Displayed as: Exchange').waitFor();
+    assert.equal(await panel.locator('.fake').count(),0);
     assert.equal(await panel.locator('img').count(), 2);
     assert.equal(await panel.locator('img[src=x]').count(), 0);
     await panel.locator('img[src$="crossbow.webp"]').waitFor();
@@ -90,7 +90,7 @@ async function runBrowserTest(mode) {
     const select = panel.getByRole('combobox', {name:'Item language'});
     await select.selectOption('ja');
     await panel.getByText('クロスボウ', {exact:true}).waitFor();
-    await panel.getByText('Displayed as: 両替').waitFor();
+    assert.equal(await panel.locator('.fake').count(),0);
     await panel.getByText('+攻2', {exact:true}).waitFor();
     // Observing a successful catalog fetch updates Auto, not a manual override.
     await page.evaluate(() => fetch('/i18n/zh-hant.json'));

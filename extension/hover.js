@@ -78,11 +78,10 @@
         if (!item || !Number.isSafeInteger(item.id) || !Number.isSafeInteger(item.modelId)) return null;
         // Validate against received data. Identical disguise images never identify
         // a card: its native view supplies the real model and instance ID.
-        const owners = state.players.filter(p => p.items.some(i => i.id === item.id &&
-          i.modelId === item.modelId && (i.fakeModelId || 0) === (item.fakeModelId || 0)));
+        const owners = state.players.filter(p => p.items.some(i => i.id === item.id && i.modelId === item.modelId));
         const owner = target.playerId !== undefined ? owners.find(p => p.id === target.playerId) : owners.length === 1 ? owners[0] : null;
         if (target.playerId !== undefined && !owner) return null;
-        const match = (owner || owners[0])?.items.find(i => i.id === item.id && i.modelId === item.modelId && (i.fakeModelId || 0) === (item.fakeModelId || 0));
+        const match = (owner || owners[0])?.items.find(i => i.id === item.id && i.modelId === item.modelId);
         return match && { item: match, owner, owners };
       }
       return null;
@@ -164,18 +163,10 @@
         content.append(list);
       } else {
         const item = resolved.item;
-        const disguised = item.fakeModelId > 0;
-        title.textContent = disguised ? 'Dream · real item' : 'Item details';
+        title.textContent = 'Item details';
         const list = el('ul', 'hover-items comparison');
         const real = renderItem(item);
-        real.querySelector('.fake')?.remove();
-        if (disguised) real.prepend(el('div', 'reveal-label', 'Real item'));
         list.append(real);
-        if (disguised) {
-          const fake = renderItem({modelId:item.fakeModelId});
-          fake.prepend(el('div', 'reveal-label apparent', 'Dream appearance'));
-          list.append(fake);
-        }
         content.append(list);
         paintAnalysis(resolved);
       }
