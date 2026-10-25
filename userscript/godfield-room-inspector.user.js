@@ -577,6 +577,7 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       cancelHide();
       cancelAnimationFrame(frame);
       request++;
+      anchor?.querySelector(':scope > .gfi-important-items')?.remove();
       active = anchor = null;
       pinned = false;
       pin.textContent = 'Pin';
@@ -696,6 +697,21 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       popup.classList.remove('has-analysis');
       if (resolved.player) {
         const p = resolved.player;
+        const importantNames = [...GodfieldImportantItems.owners(p.items, GodfieldImportantItems.load())]
+          .map(id => GodfieldLocalization.item(id, language())?.name ?? `#${id}`);
+        const previousBadge = anchor.querySelector(':scope > .gfi-important-items');
+        previousBadge?.remove();
+        if (importantNames.length) {
+          const badge = document.createElement('span');
+          badge.className = 'gfi-important-items';
+          badge.textContent = ` · ${importantNames.join(', ')}`;
+          Object.assign(badge.style, {
+            color: '#a74667',
+            fontWeight: '700',
+            overflowWrap: 'anywhere'
+          });
+          anchor.append(badge);
+        }
         title.textContent = `${p.name || 'Player'} · ${p.items.length} ${p.items.length === 1 ? 'item' : 'items'}`;
         const stats = el('div', 'hover-stats', ['hp','mp','cp'].filter(k => Number.isSafeInteger(p[k])).map(k => `${k.toUpperCase()} ${p[k]}`).join(' · '));
         content.append(stats);
