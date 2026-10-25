@@ -401,6 +401,41 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
   globalThis.GodfieldLocalization = Object.freeze({ supported, detectLanguage, item });
 })();
 
+// Source: extension/important.js
+(() => {
+  'use strict';
+  const STORAGE_KEY = 'godfield-room-inspector-important-items';
+  const DEFAULT_ITEM_IDS = Object.freeze([56, 91, 112, 180, 181, 189, 204, 233]);
+  const validId = value => Number.isSafeInteger(value) && value > 0;
+  const normalize = values => new Set(values.filter(validId).sort((a, b) => a - b));
+  const parse = value => normalize(String(value ?? '').split(/[,\s]+/).map(Number));
+  const serialize = ids => [...ids].sort((a, b) => a - b).join(', ');
+
+  function load() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored === null ? normalize([...DEFAULT_ITEM_IDS]) : parse(stored);
+    } catch {
+      return normalize([...DEFAULT_ITEM_IDS]);
+    }
+  }
+
+  function save(ids) {
+    const normalized = normalize([...ids]);
+    try { localStorage.setItem(STORAGE_KEY, serialize(normalized)); } catch { /* Storage may be unavailable. */ }
+    return normalized;
+  }
+
+  function owners(items, ids) {
+    const important = ids instanceof Set ? ids : normalize([...ids]);
+    return new Set(items.filter(item => important.has(item?.modelId)).map(item => item.modelId));
+  }
+
+  const api = Object.freeze({DEFAULT_ITEM_IDS, load, save, parse, serialize, owners});
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else globalThis.GodfieldImportantItems = api;
+})();
+
 // Source: extension/matchups.js
 (() => {
   'use strict';
@@ -829,12 +864,15 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       .status { margin: 0; flex: 1; font-size: 11px; color: #17604e; }
       select { width: 138px; max-width: 45%; background: #eeffee; color: #00795e; border: 1px solid #008f6f;
         border-radius: 5px; padding: 5px 3px; font-size: 11px; }
+      .important-input { width: 118px; max-width: 30%; min-width: 0; background: #eeffee; color: #00795e;
+        border: 1px solid #008f6f; border-radius: 5px; padding: 5px 6px; font-size: 11px; }
       .body { max-height: min(65vh, 620px); overflow-y: auto; padding: 10px 9px 0;
         scrollbar-color: #55bb99 #ddffcc; scrollbar-width: thin; }
       .empty { padding: 23px 12px 30px; color: #487562; }
       details { background: #55bb99; border: 1px solid #008f6f; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
       summary { cursor: pointer; padding: 8px 11px; color: #eeffee; background: #008f6f; }
       .name { font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+      .important { color: #a74667; }
       .stats { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
       .stat { color: #008f6f; background: #eeffee; border-radius: 4px; padding: 1px 8px; font-size: 11px; font-weight: 700; }
       .count { float: right; color: #eeffee; border: 1px solid #95e3bb; border-radius: 12px; padding: 1px 7px; font-size: 10px; }
@@ -858,7 +896,7 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       .note { color: #ddffcc; font-size: 10px; flex: 1; } .export { background: #eeffee; color: #008f6f;
         border: 1px solid #ddffcc; border-radius: 5px; padding: 4px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }
       button:disabled { opacity: .5; cursor: default; } [hidden] { display: none !important; }
-      button:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #ffd567; outline-offset: -3px; }
+      button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid #ffd567; outline-offset: -3px; }
       .hover-preview { position: fixed; width: min(420px, calc(100vw - 16px)); background: #ddffcc;
         border: 2px solid #008f6f; border-radius: 12px; box-shadow: 0 6px 28px #003b3b55; overflow: hidden; }
       .hover-preview.has-analysis { width: min(440px, calc(100vw - 16px)); }
@@ -924,7 +962,19 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       languageSelect.append(option);
     }
     languageSelect.onchange = () => { languageChoice = languageSelect.value; render(); };
-    toolbar.append(status, languageSelect);
+    const importantInput = el('input');
+    importantInput.type = 'text';
+    importantInput.className = 'important-input';
+    importantInput.placeholder = 'Important item IDs';
+    importantInput.title = 'Comma- or space-separated item IDs';
+    importantInput.setAttribute('aria-label', 'Important item IDs');
+    importantInput.value = GodfieldImportantItems.serialize(GodfieldImportantItems.load());
+    importantInput.addEventListener('change', () => {
+      importantIds = GodfieldImportantItems.save(GodfieldImportantItems.parse(importantInput.value));
+      importantInput.value = GodfieldImportantItems.serialize(importantIds);
+      render();
+    });
+    toolbar.append(status, languageSelect, importantInput);
     const body = el('div', 'body');
     const footer = el('footer');
     const note = el('span', 'note', 'Only data received by this tab.');
@@ -960,6 +1010,7 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     };
     const model = id => GodfieldLocalization.item(id, language());
+    let importantIds = GodfieldImportantItems.load();
     const renderItem = item => {
       const info = model(item.modelId);
       const validId = Number.isSafeInteger(item.modelId) && item.modelId > 0;
@@ -1012,12 +1063,16 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       }
       for (const player of state.players) {
         const key = String(player.id);
+        const important = GodfieldImportantItems.owners(player.items, importantIds);
+        const importantNames = [...important].map(id => model(id)?.name ?? `#${id}`);
         const details = el('details');
         details.open = expanded.get(key) ?? true;
         details.addEventListener('toggle', () => { if (details.isConnected) expanded.set(key, details.open); });
         const summary = el('summary');
         summary.dataset.player = key;
-        summary.append(el('span', 'name', player.name || `Player ${key}`),
+        const name = el('span', `name${importantNames.length ? ' important' : ''}`,
+          `${player.name || `Player ${key}`}${importantNames.length ? ` · ${importantNames.join(', ')}` : ''}`);
+        summary.append(name,
           el('span', 'count', player.itemsAvailable ? `${player.items.length} ${player.items.length === 1 ? 'item' : 'items'}` : 'Unavailable'));
         const stats = el('div', 'stats');
         for (const key of ['hp', 'mp', 'cp']) if (Number.isSafeInteger(player[key])) {

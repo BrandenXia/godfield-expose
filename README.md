@@ -48,7 +48,7 @@ The userscript is self-contained, runs only on `https://godfield.net/*`, and nee
 - **Combat matchups:** attack previews show each opponent’s compatible defenses; protection previews show enemy attacks and whether that protection covers them. Dual-purpose items show both.
 - **Keep a preview open:** move into it to inspect the cards, or select **Pin**. Select **×** or press **Esc** to dismiss it.
 - **Keyboard:** tab to a player tag or card for its preview. **Alt+I** toggles the full inspector.
-- **Full inspector:** select **+** at the lower right to browse every player, change the item language, or save JSON. Its combat cards also offer enemy matchup previews.
+- **Full inspector:** select **+** at the lower right to browse every player, change the item language, configure important item IDs, or save JSON. Players holding a configured item are labeled beside their name. The default set includes high-impact items such as Ascension Bow (ID 112); enter comma- or space-separated model IDs in the **Important item IDs** field to replace it. Its combat cards also offer enemy matchup previews.
 
 <img src="docs/images/hover-player.png" alt="Hovering an opponent’s name tag in Training shows their nine-item hand beside the game" width="800">
 
