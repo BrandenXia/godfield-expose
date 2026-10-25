@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         God Field Room Inspector
 // @namespace    https://github.com/BrandenXia/godfield-expose
-// @version      0.5.1
+// @version      0.6.0
 // @description  Show player items present in the room snapshots your God Field client receives.
 // @homepageURL  https://github.com/BrandenXia/godfield-expose
 // @supportURL   https://github.com/BrandenXia/godfield-expose/issues
@@ -174,6 +174,20 @@
   };
   window.addEventListener('message', event => {
     const data = event.data;
+    if (event.source === window && event.origin === location.origin && data?.channel === 'godfield-room-inspector-v1' &&
+        data.type === 'list-player-targets' && Number.isSafeInteger(data.request)) {
+      const targets = [];
+      for (const node of document.querySelectorAll('#main [data-gfi-target]')) {
+        const view = views.get(node), target = view && decode(view);
+        const name = own(own(own(view, 'Q'), 'c'), 'a');
+        if (target?.kind !== 'player' || !element(name) || !node.contains(name)) continue;
+        name.setAttribute('data-gfi-name-target', node.dataset.gfiTarget);
+        targets.push({...target, target:node.dataset.gfiTarget});
+        if (targets.length >= 18) break;
+      }
+      window.postMessage({channel:data.channel, type:'player-targets', request:data.request, targets}, location.origin);
+      return;
+    }
     if (event.source !== window || event.origin !== location.origin ||
         data?.channel !== 'godfield-room-inspector-v1' || data.type !== 'inspect-target' ||
         !Number.isSafeInteger(data.request) || !/^\d{1,9}$/.test(data.target)) return;
@@ -399,6 +413,295 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
     };
   }
   globalThis.GodfieldLocalization = Object.freeze({ supported, detectLanguage, item });
+})();
+
+// Source: extension/name-rules.js
+(() => {
+  'use strict';
+  const defaults = `// First matching rule sets the name color. All matches add badges.
+has("升天弓") => #b13978 "{item}"
+has("太阳守护") => #986200 "{item}"
+has("Super Mirror") => #6554ad "{item}"
+has("God Shield") => #16669a "{item}"
+def == 0 => #b53535 "DEF 0"
+hp <= 10 => #b53535 "HP {hp}"`;
+  const names = new Map();
+  const normalize = name => name.normalize('NFKC').trim().toLowerCase();
+  for (const locale of Object.values(GODFIELD_CATALOG.languages)) locale.names.forEach((name, index) => {
+    const key = normalize(name);
+    if (!names.has(key)) names.set(key, new Set());
+    names.get(key).add(index + 1);
+  });
+  const fields = ['def', 'hp', 'mp', 'cp', 'items'];
+  function compile(source) {
+    const rules = [], errors = [];
+    if (typeof source !== 'string' || source.length > 12000) return {rules, errors:['Rules must be at most 12,000 characters.']};
+    for (const [index, raw] of source.split(/\r?\n/).entries()) {
+      const line = raw.trim();
+      if (!line || line.startsWith('//')) continue;
+      try {
+        if (rules.length >= 32) throw Error('At most 32 rules are allowed.');
+        if (line.length > 600) throw Error('Rule is longer than 600 characters.');
+        const tokens = line.match(/"(?:[^"\\]|\\.)*"|=>|==|!=|<=|>=|[<>(),]|#[\da-fA-F]+|\d+|[a-zA-Z_]+|\S/g) || [];
+        let pos = 0;
+        const take = expected => {
+          const token = tokens[pos++];
+          if (expected && token !== expected) throw Error(`Expected ${expected}.`);
+          return token;
+        };
+        function expression(depth = 0) {
+          if (depth > 12) throw Error('Too many nested conditions.');
+          let node = conjunction(depth + 1);
+          while (tokens[pos] === 'or') { take(); node = {op:'or', left:node, right:conjunction(depth + 1)}; }
+          return node;
+        }
+        function conjunction(depth) {
+          let node = atom(depth);
+          while (tokens[pos] === 'and') { take(); node = {op:'and', left:node, right:atom(depth)}; }
+          return node;
+        }
+        function atom(depth) {
+          if (depth > 12) throw Error('Too many nested conditions.');
+          const token = take();
+          if (token === 'not') return {op:'not', child:atom(depth + 1)};
+          if (token === '(') { const node = expression(depth + 1); take(')'); return node; }
+          if (token === 'has') {
+            take('(');
+            const value = take();
+            let id;
+            if (/^\d+$/.test(value || '')) id = Number(value);
+            else {
+              const name = JSON.parse(value);
+              if (typeof name !== 'string') throw Error('Use an item name in double quotes or a numeric ID.');
+              const matches = names.get(normalize(name));
+              if (!matches?.size) throw Error(`Unknown item: ${name}.`);
+              if (matches.size > 1) throw Error(`Ambiguous item name: ${name}. Use its numeric ID.`);
+              id = [...matches][0];
+            }
+            if (!Number.isSafeInteger(id) || !GODFIELD_CATALOG.models[id - 1]) throw Error('Unknown item ID.');
+            take(')');
+            return {op:'has', id};
+          }
+          if (!fields.includes(token)) throw Error('Use has("item"), def, hp, mp, cp, or items.');
+          const compare = take(), value = take();
+          if (!['==','!=','<=','>=','<','>'].includes(compare) || !/^\d+$/.test(value || '') || Number(value) > 99999) {
+            throw Error('Use a comparison such as def == 0 or hp <= 10.');
+          }
+          return {op:'compare', field:token, compare, value:Number(value)};
+        }
+        const condition = expression();
+        take('=>');
+        const color = take();
+        if (!/^#(?:[\da-fA-F]{3}|[\da-fA-F]{6})$/.test(color || '')) throw Error('Use a hex color such as #b53535.');
+        const label = JSON.parse(take());
+        if (typeof label !== 'string' || !label.trim() || label.length > 80) throw Error('Use a quoted label of 1–80 characters.');
+        if (tokens[pos] !== undefined) throw Error('Unexpected text after label.');
+        if (/[\r\n\t]/.test(label)) throw Error('Labels must be on one line.');
+        if (/\{(?!item\}|def\}|hp\}|mp\}|cp\}|items\})/.test(label)) throw Error('Unknown label placeholder.');
+        rules.push({condition, color, label, line:index + 1});
+      } catch (error) {
+        errors.push(`Line ${index + 1}: ${error instanceof SyntaxError ? 'Invalid quoted text or incomplete rule.' : error.message}`);
+      }
+    }
+    return {rules:errors.length ? [] : rules, errors};
+  }
+  function evaluate(rules, player, language) {
+    if (player.dead) return [];
+    const inventory = Array.isArray(player.items) ? player.items : [];
+    const known = inventory.filter(i => Number.isSafeInteger(i.modelId) && GODFIELD_CATALOG.models[i.modelId - 1]);
+    const complete = player.itemsAvailable === true && known.length === inventory.length;
+    const values = {def:complete ? known.reduce((sum, i) => sum + (GODFIELD_CATALOG.models[i.modelId - 1].def || 0), 0) : null,
+      items:player.itemsAvailable === true ? inventory.length : null};
+    for (const field of ['hp','mp','cp']) values[field] = Number.isSafeInteger(player[field]) ? player[field] : null;
+    function test(node) {
+      if (node.op === 'has') {
+        const found = player.itemsAvailable === true && known.some(i => i.modelId === node.id);
+        return {value:found ? true : complete ? false : null, ids:found ? [node.id] : []};
+      }
+      if (node.op === 'compare') {
+        const a = values[node.field], b = node.value;
+        return {value:a === null ? null : ({'==':a===b,'!=':a!==b,'<':a<b,'<=':a<=b,'>':a>b,'>=':a>=b})[node.compare], ids:[]};
+      }
+      const a = test(node.child || node.left);
+      if (node.op === 'not') return {value:a.value === null ? null : !a.value, ids:[]};
+      const b = test(node.right);
+      const value = node.op === 'and'
+        ? a.value === false || b.value === false ? false : a.value === null || b.value === null ? null : true
+        : a.value === true || b.value === true ? true : a.value === null || b.value === null ? null : false;
+      return {value, ids:[...(a.value === true ? a.ids : []), ...(b.value === true ? b.ids : [])]};
+    }
+    const result = [], seen = new Set();
+    for (const rule of rules) {
+      const match = test(rule.condition);
+      if (match.value !== true) continue;
+      const item = [...new Set(match.ids)].map(id => GodfieldLocalization.item(id, language)?.name || `#${id}`).join(' / ');
+      const text = rule.label.replace(/\{(item|def|hp|mp|cp|items)\}/g, (_, key) => key === 'item' ? item : values[key] ?? '?').slice(0, 180);
+      if (!text.trim() || seen.has(text)) continue;
+      seen.add(text);
+      result.push({color:rule.color, text});
+    }
+    return result;
+  }
+  globalThis.GodfieldNameRules = Object.freeze({defaults, compile, evaluate});
+})();
+
+// Source: extension/name-labels.js
+(() => {
+  'use strict';
+  const CHANNEL = 'godfield-room-inspector-v1', STORAGE = 'godfield-inspector-name-rules-v1';
+  function create({getState, language, onChange}) {
+    const el = (tag, cls, text) => {
+      const node = document.createElement(tag);
+      node.className = cls;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    };
+    let source = GodfieldNameRules.defaults, enabled = true, storageIssue = '';
+    try {
+      const stored = localStorage.getItem(STORAGE) || 'null';
+      if (stored.length > 80000) throw Error('Oversized saved rules');
+      const saved = JSON.parse(stored);
+      if (saved && typeof saved.source === 'string') {
+        const parsed = GodfieldNameRules.compile(saved.source);
+        if (!parsed.errors.length) { source = saved.source; enabled = saved.enabled !== false; }
+        else storageIssue = 'Saved rules are invalid. Presets are active; edit and apply to replace them.';
+      }
+    } catch { storageIssue = 'Saved rules could not be loaded. Presets are active.'; }
+    let rules = GodfieldNameRules.compile(source).rules;
+    const editor = el('section', 'rules-editor');
+    editor.setAttribute('aria-label', 'Name label rules');
+    editor.append(el('h3', '', 'Name labels'));
+    const enabledLabel = el('label', 'rules-enabled', ' Enable name labels');
+    const checkbox = el('input', ''); checkbox.type = 'checkbox'; checkbox.checked = enabled;
+    enabledLabel.prepend(checkbox); editor.append(enabledLabel);
+    editor.append(el('p', 'rules-help', 'One rule per line. First match colors the name; all matches add badges. Item names work in all eight languages.'));
+    const input = el('textarea', 'rules-source');
+    input.setAttribute('aria-label', 'Rule text'); input.spellcheck = false; input.value = source; input.maxLength = 12000;
+    editor.append(input);
+    const actions = el('div', 'rules-actions');
+    const apply = el('button', 'export', 'Apply rules');
+    const reset = el('button', 'export', 'Load presets');
+    actions.append(apply, reset); editor.append(actions);
+    const message = el('p', 'rules-message', storageIssue || 'Changes take effect when you apply them.');
+    message.setAttribute('role', 'status');
+    const errors = el('p', 'rules-errors'); errors.setAttribute('role', 'alert');
+    editor.append(message, errors);
+    const help = el('details', 'rules-guide');
+    help.append(el('summary', '', 'Rule syntax & examples'));
+    help.append(el('pre', '', 'has("升天弓") => #b13978 "{item}"\nhas("太阳守护") => #986200 "{item}"\ndef == 0 => #b53535 "DEF 0"\nhas(112) and hp <= 10 => #b53535 "Bow · HP {hp}"\nnot has(208) and def < 5 => #a34e22 "Low DEF {def}"'));
+    help.append(el('p', '', 'Conditions: has("item name") or has(ID); def, hp, mp, cp, items with == != < <= > >=. Combine with and, or, not, and parentheses. Start comment lines with //. Colors: #RGB or #RRGGBB. Labels support {item}, {def}, {hp}, {mp}, {cp}, {items}. Empty text disables all rules.'));
+    help.append(el('p', '', 'DEF is the sum of printed DEF on owned known items, including dual-purpose cards. It does not include reflection, blocking, elemental compatibility, or MP costs. Unknown inventories cannot match DEF or absent-item rules. Eliminated players have no labels. Presets load into the editor; Apply saves them.'));
+    editor.append(help, el('h4', '', 'Preview · current room'));
+    const preview = el('div', 'rules-preview'); editor.append(preview);
+    function matches(player, selected = rules) { return enabled ? GodfieldNameRules.evaluate(selected, player, language()) : []; }
+    function badgeNode(match) {
+      const badge = el('span', 'name-rule-badge', match.text);
+      badge.style.color = match.color;
+      return badge;
+    }
+    function decorate(name, container, player) {
+      const labels = matches(player);
+      if (labels.length) {
+        name.style.color = labels[0].color;
+        name.style.background = '#eeffee'; name.style.padding = '0 4px'; name.style.borderRadius = '3px';
+      }
+      for (const label of labels) container.append(badgeNode(label));
+    }
+    function previewDraft() {
+      const parsed = GodfieldNameRules.compile(input.value);
+      errors.textContent = parsed.errors.join('\n');
+      input.setAttribute('aria-invalid', String(Boolean(parsed.errors.length)));
+      apply.disabled = parsed.errors.length > 0;
+      preview.replaceChildren();
+      if (parsed.errors.length) { preview.append(el('p', '', 'Fix the errors to preview. Your applied rules are unchanged.')); return; }
+      const state = getState();
+      if (!state.players.length) preview.append(el('p', '', 'Join a game to preview player labels.'));
+      for (const player of state.players) {
+        const row = el('div', 'rules-preview-row'), name = el('strong', '', player.name);
+        row.append(name);
+        const labels = checkbox.checked ? GodfieldNameRules.evaluate(parsed.rules, player, language()) : [];
+        if (labels.length) name.style.color = labels[0].color;
+        for (const label of labels) row.append(badgeNode(label));
+        if (!labels.length) row.append(el('span', 'rules-help', 'No matching labels'));
+        preview.append(row);
+      }
+    }
+    input.oninput = checkbox.onchange = () => { message.textContent = 'Unsaved changes · preview only'; previewDraft(); };
+    reset.onclick = () => { input.value = GodfieldNameRules.defaults; checkbox.checked = true; input.oninput(); };
+    apply.onclick = () => {
+      const parsed = GodfieldNameRules.compile(input.value);
+      if (parsed.errors.length) { previewDraft(); return; }
+      source = input.value; enabled = checkbox.checked; rules = parsed.rules;
+      try { localStorage.setItem(STORAGE, JSON.stringify({source, enabled})); message.textContent = 'Applied and saved in this browser.'; }
+      catch { message.textContent = 'Applied for this tab. Browser storage is unavailable; changes will not survive reload.'; }
+      onChange();
+    };
+    // Scope styling to validated native name text nodes. Removing the attribute
+    // restores the game's own inline styles; status values and target buttons stay intact.
+    const style = document.createElement('style');
+    style.textContent = '#main [data-gfi-name-labeled] { color:var(--gfi-name-color) !important; max-width:60px !important; font-size:16px !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }';
+    document.documentElement.append(style);
+    const decorated = new Map();
+    function remove(name, entry) {
+      name.removeAttribute('data-gfi-name-labeled'); name.style.removeProperty('--gfi-name-color'); entry.host.remove();
+      decorated.delete(name);
+    }
+    function clear() { for (const [name, entry] of decorated) remove(name, entry); }
+    let frame = 0, request = 0;
+    function schedule() {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const state = getState();
+        if (!enabled || !['playing','finished'].includes(state.status) || !rules.length) { request++; clear(); return; }
+        window.postMessage({channel:CHANNEL, type:'list-player-targets', request:++request}, location.origin);
+      });
+    }
+    window.addEventListener('message', event => {
+      const data = event.data;
+      if (event.source !== window || event.origin !== location.origin || data?.channel !== CHANNEL ||
+          data.type !== 'player-targets' || data.request !== request || !Array.isArray(data.targets) || data.targets.length > 18) return;
+      const seen = new Set(), state = getState();
+      if (!enabled || !['playing','finished'].includes(state.status)) { clear(); return; }
+      for (const target of data.targets) {
+        if (!target || !/^\d{1,9}$/.test(target.target) || !Number.isSafeInteger(target.playerId)) continue;
+        const player = state.players.find(p => p.id === target.playerId && p.name === target.name);
+        const name = document.querySelector(`#main [data-gfi-name-target="${target.target}"]`);
+        const root = document.querySelector(`#main [data-gfi-target="${target.target}"]`);
+        if (!player || !name || !root?.contains(name) || !name.parentElement) continue;
+        const labels = matches(player);
+        if (!labels.length) continue;
+        seen.add(name);
+        let entry = decorated.get(name);
+        if (!entry) {
+          const host = document.createElement('span'); host.dataset.gfiNameBadges = target.target;
+          host.setAttribute('role', 'note');
+          const shadow = host.attachShadow({mode:'open'}), css = el('style', '');
+          css.textContent = ':host { position:absolute; top:0; width:57px; height:40px; display:flex; flex-direction:column; justify-content:center; pointer-events:none; z-index:1; font:10px/12px Meiryo,system-ui,sans-serif; } span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; background:#eeffee; border-radius:2px; padding:0 2px; }';
+          shadow.append(css);
+          const list = el('div', ''); shadow.append(list);
+          entry = {host, list}; decorated.set(name, entry);
+        }
+        const left = parseFloat(name.style.left);
+        if (!Number.isFinite(left)) { seen.delete(name); continue; }
+        entry.host.style.left = `${left + 63}px`;
+        if (entry.host.parentElement !== name.parentElement) name.parentElement.append(entry.host);
+        entry.list.replaceChildren();
+        const shown = labels.length > 3 ? 2 : 3;
+        for (const label of labels.slice(0, shown)) entry.list.append(badgeNode(label));
+        if (labels.length > 3) entry.list.append(el('span', '', `+${labels.length - shown} more`));
+        entry.host.setAttribute('aria-label', labels.map(l => l.text).join(' · '));
+        name.setAttribute('data-gfi-name-labeled', '');
+        name.style.setProperty('--gfi-name-color', labels[0].color);
+      }
+      for (const [name, entry] of decorated) if (!seen.has(name)) remove(name, entry);
+    });
+    const observer = new MutationObserver(schedule);
+    observer.observe(document.documentElement, {childList:true, subtree:true, attributes:true, attributeFilter:['data-gfi-target']});
+    previewDraft();
+    return {editor, decorate, update() { previewDraft(); schedule(); }};
+  }
+  globalThis.GodfieldNameLabels = Object.freeze({create});
 })();
 
 // Source: extension/matchups.js
@@ -891,8 +1194,22 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       .hover-preview .item-name { display: block; -webkit-line-clamp: unset; overflow: visible; }
       .hover-preview .empty-items { color: #17604e; }
       .card:focus-visible { outline: 3px solid #ffd567; outline-offset: -3px; }
+      .rules-editor { padding:12px; max-height:min(65vh,620px); overflow-y:auto; }
+      .rules-editor h3, .rules-editor h4 { margin:0 0 8px; color:#006a51; }
+      .rules-enabled { display:flex; align-items:center; gap:6px; font-weight:700; }
+      .rules-source { display:block; box-sizing:border-box; width:100%; min-height:210px; resize:vertical; font:12px/1.7 ui-monospace,monospace; background:#eeffee; color:#234f43; border:1px solid #008f6f; border-radius:6px; padding:8px; }
+      .rules-source:focus-visible { outline:3px solid #ffd567; }
+      .rules-actions { display:flex; gap:8px; margin:9px 0; }
+      .rules-help, .rules-message { font-size:11px; }
+      .rules-errors { white-space:pre-wrap; color:#a42929; font-size:11px; }
+      .rules-guide { background:#eeffee; font-size:11px; }
+      .rules-guide p, .rules-guide pre { margin:8px; white-space:pre-wrap; overflow-wrap:anywhere; }
+      .rules-preview-row, .name-rule-labels { display:flex; gap:4px; flex-wrap:wrap; align-items:center; }
+      .rules-preview-row { padding:6px 0; border-bottom:1px solid #95d8b7; }
+      .name-rule-labels { margin-top:4px; }
+      .name-rule-badge { display:inline-block; font-size:10px; line-height:1.5; background:#eeffee; border:1px solid currentColor; padding:0 4px; border-radius:4px; overflow-wrap:anywhere; }
       @media (max-width: 380px) { ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } h2 { font-size: 17px; } }
-      @media (max-height: 500px) { .body { max-height: calc(100dvh - 190px); } }
+      @media (max-height: 500px) { .body, .rules-editor { max-height: calc(100dvh - 190px); } }
     `;
     const el = (tag, cls, text) => {
       const node = document.createElement(tag);
@@ -929,17 +1246,21 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
     const footer = el('footer');
     const note = el('span', 'note', 'Only data received by this tab.');
     const exportButton = el('button', 'export', 'Save JSON');
-    footer.append(note, exportButton);
+    const labelsButton = el('button', 'export', 'Name labels');
+    labelsButton.setAttribute('aria-expanded', 'false');
+    footer.append(note, labelsButton, exportButton);
     panel.append(header, toolbar, body, footer);
     shadow.append(style, panel);
     document.documentElement.append(host);
-    let collapsed = true;
+    let collapsed = true, editingRules = false;
     body.hidden = footer.hidden = toolbar.hidden = true;
     const expanded = new Map();
     toggle.onclick = () => {
       collapsed = !collapsed;
       panel.classList.toggle('is-collapsed', collapsed);
-      body.hidden = footer.hidden = toolbar.hidden = collapsed;
+      footer.hidden = toolbar.hidden = collapsed;
+      body.hidden = collapsed || editingRules;
+      nameLabels.editor.hidden = collapsed || !editingRules;
       toggle.textContent = collapsed ? '+' : '−';
       toggle.setAttribute('aria-label', collapsed ? 'Expand inspector' : 'Collapse inspector');
       toggle.setAttribute('aria-expanded', String(!collapsed));
@@ -994,6 +1315,17 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       return row;
     };
     const hover = GodfieldHover.create({shadow, renderItem, getState: () => state, language});
+    const nameLabels = GodfieldNameLabels.create({getState:() => state, language, onChange:() => render()});
+    nameLabels.editor.hidden = true;
+    panel.insertBefore(nameLabels.editor, body);
+    labelsButton.onclick = () => {
+      editingRules = !editingRules;
+      body.hidden = editingRules;
+      nameLabels.editor.hidden = !editingRules;
+      labelsButton.textContent = editingRules ? 'Back to items' : 'Name labels';
+      labelsButton.setAttribute('aria-expanded', String(editingRules));
+      if (editingRules) { hover.hide(); nameLabels.editor.querySelector('textarea').focus(); }
+    };
     render = () => {
       autoOption.textContent = `Auto · ${GODFIELD_CATALOG.languages[gameLanguage].label}`;
       body.lang = language();
@@ -1017,8 +1349,12 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
         details.addEventListener('toggle', () => { if (details.isConnected) expanded.set(key, details.open); });
         const summary = el('summary');
         summary.dataset.player = key;
-        summary.append(el('span', 'name', player.name || `Player ${key}`),
+        const playerName = el('span', 'name', player.name || `Player ${key}`);
+        summary.append(playerName,
           el('span', 'count', player.itemsAvailable ? `${player.items.length} ${player.items.length === 1 ? 'item' : 'items'}` : 'Unavailable'));
+        const labels = el('div', 'name-rule-labels');
+        nameLabels.decorate(playerName, labels, player);
+        if (labels.childNodes.length) summary.append(labels);
         const stats = el('div', 'stats');
         for (const key of ['hp', 'mp', 'cp']) if (Number.isSafeInteger(player[key])) {
           const label = key === 'cp' ? GODFIELD_CATALOG.languages[language()].stats.cp : key.toUpperCase();
@@ -1039,6 +1375,7 @@ const GODFIELD_CATALOG = {"models":[{"imageName":"discard","category":"trade","a
       }
       body.scrollTop = scroll;
       hover.update();
+      nameLabels.update();
       if (focusedPlayer !== undefined) {
         [...body.querySelectorAll('summary')].find(s => s.dataset.player === focusedPlayer)?.focus({ preventScroll: true });
       }

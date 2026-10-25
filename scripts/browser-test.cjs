@@ -107,11 +107,11 @@ async function runBrowserTest(mode) {
     await select.selectOption('en');
     assert.equal(await page.evaluate(() => lastGameSnapshot.data().game.updateCount), 1);
     // Verify open/closed details persist when the next snapshot arrives.
-    await panel.locator('summary').first().click();
-    await page.waitForFunction(() => !document.querySelector('#godfield-room-inspector').shadowRoot.querySelector('details').open);
+    await panel.locator('.body summary').first().click();
+    await page.waitForFunction(() => !document.querySelector('#godfield-room-inspector').shadowRoot.querySelector('.body details').open);
     await page.evaluate(room => deliver({data: () => room, metadata: {fromCache: true}}), room);
     await panel.getByText('Live room snapshot · cached, may be stale').waitFor();
-    assert.equal(await panel.locator('details').first().getAttribute('open'), null);
+    assert.equal(await panel.locator('.body details').first().getAttribute('open'), null);
     const downloadPromise = page.waitForEvent('download');
     await panel.getByRole('button', {name: 'Save JSON'}).click();
     const download = await downloadPromise;
@@ -124,7 +124,7 @@ async function runBrowserTest(mode) {
       room.game.players[0].items.push({id:10, modelId:13});
       deliver({data:()=>room});
     }, room);
-    await panel.locator('summary').first().click();
+    await panel.locator('.body summary').first().click();
     await page.waitForFunction(() => document.querySelector('#godfield-room-inspector').shadowRoot.querySelector('img[src$="punch.webp"]')?.hidden === true);
     await panel.getByText('Punch', {exact:true}).waitFor();
     await page.setViewportSize({width:360,height:780});
@@ -135,7 +135,7 @@ async function runBrowserTest(mode) {
     await panel.getByRole('button', {name: 'Expand inspector'}).click();
     await page.evaluate(() => stop());
     await panel.getByText('Left room · inventory cleared').waitFor();
-    assert.equal(await panel.locator('details').count(), 0);
+    assert.equal(await panel.locator('.body details').count(), 0);
     assert.equal(await page.evaluate(() => stopped), true);
     assert.deepEqual(await page.evaluate(() => ({
       subscriptions: fixture.subscriptions,

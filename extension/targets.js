@@ -56,6 +56,20 @@
   };
   window.addEventListener('message', event => {
     const data = event.data;
+    if (event.source === window && event.origin === location.origin && data?.channel === 'godfield-room-inspector-v1' &&
+        data.type === 'list-player-targets' && Number.isSafeInteger(data.request)) {
+      const targets = [];
+      for (const node of document.querySelectorAll('#main [data-gfi-target]')) {
+        const view = views.get(node), target = view && decode(view);
+        const name = own(own(own(view, 'Q'), 'c'), 'a');
+        if (target?.kind !== 'player' || !element(name) || !node.contains(name)) continue;
+        name.setAttribute('data-gfi-name-target', node.dataset.gfiTarget);
+        targets.push({...target, target:node.dataset.gfiTarget});
+        if (targets.length >= 18) break;
+      }
+      window.postMessage({channel:data.channel, type:'player-targets', request:data.request, targets}, location.origin);
+      return;
+    }
     if (event.source !== window || event.origin !== location.origin ||
         data?.channel !== 'godfield-room-inspector-v1' || data.type !== 'inspect-target' ||
         !Number.isSafeInteger(data.request) || !/^\d{1,9}$/.test(data.target)) return;

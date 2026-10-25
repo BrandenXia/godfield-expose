@@ -46,6 +46,7 @@ The userscript is self-contained, runs only on `https://godfield.net/*`, and nee
 - **Dream items:** the native card directly shows the real artwork and stats. No dream comparison popover is needed; ordinary item hover still shows combat matchups. A missing sprite falls back to the real item name.
 - **Fog:** opponent name tags, HP/MP/money, and the game’s available target buttons remain visible. Fog’s visual screen overlay is hidden. **The server may still randomize the target while the fog curse is active.**
 - **Combat matchups:** attack previews show each opponent’s compatible defenses; protection previews show enemy attacks and whether that protection covers them. Dual-purpose items show both.
+- **Name labels:** native names get rule-based colors and badges for notable items, zero printed DEF, and low HP. Open the inspector → **Name labels** to edit the text rules, preview them, and apply. Settings persist in this browser. See the [rule reference](docs/name-rules.md).
 - **Keep a preview open:** move into it to inspect the cards, or select **Pin**. Select **×** or press **Esc** to dismiss it.
 - **Keyboard:** tab to a player tag or card for its preview. **Alt+I** toggles the full inspector.
 - **Full inspector:** select **+** at the lower right to browse every player, change the item language, or save JSON. Its combat cards also offer enemy matchup previews.
@@ -64,6 +65,20 @@ Hover a native game card or a card in the expanded inspector. The preview opens 
 Names and element labels follow the selected item language; analysis explanations remain in English. Pinned previews refresh as inventories, MP, and curses change.
 
 These are **base item comparisons**, not a damage forecast or exhaustive search of combinations. They cover elemental compatibility, category-specific reflection/blocking, darkness lethality, and the Flash defense limit. Attack combinations, direct HP-changing effects, most curse/guardian interactions, and random or conditional effects are not simulated. Counter items do not imply damage prevention. Concealed or unmapped items can hide additional options. Rules are based on the current public client and official catalog; see [the investigation](docs/investigation.md#combat-analysis-october-22-2026).
+
+## Custom player name labels
+
+The shipped presets highlight 升天弓 / Ascension Bow, 太阳守护 / Sun Amulet, Super Mirror, God Shield, zero printed DEF, and low HP. Rules accept official item names in any supported language or numeric item IDs:
+
+```text
+has("升天弓") => #b13978 "{item}"
+has("太阳守护") => #986200 "{item}"
+def == 0 => #b53535 "DEF 0"
+```
+
+The first matching rule sets the name color; all matches add badges. Combine conditions with `and`, `or`, `not`, and parentheses. **DEF 0** means zero printed DEF, not absence of reflection or blocking. Concealed/missing inventory does not count as zero. Open **Name labels** for a live draft preview, error messages, a disable switch, and preset reset. [Full syntax and examples](docs/name-rules.md).
+
+<img src="docs/images/name-labels.png" alt="Custom name colors and translated item badges beside native player names, with the text rule editor and live preview" width="800">
 
 ## Item languages and artwork
 

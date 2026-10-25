@@ -212,7 +212,7 @@ async function runHoverTest(mode) {
     // Full-panel cards already carry unambiguous ownership, including translations.
     await page.keyboard.press('Alt+i');
     await inspector.getByLabel('Item language').selectOption('ja');
-    const ownCard=inspector.locator('.panel details').first().locator('.card').filter({hasText:'#59'});
+    const ownCard=inspector.locator('.panel .body details').first().locator('.card').filter({hasText:'#59'});
     await ownCard.focus();
     await analysis.getByText('Item owner: You',{exact:true}).waitFor();
     await analysis.getByText('アイスアーマー',{exact:true}).waitFor();

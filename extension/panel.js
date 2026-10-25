@@ -127,8 +127,22 @@
       .hover-preview .item-name { display: block; -webkit-line-clamp: unset; overflow: visible; }
       .hover-preview .empty-items { color: #17604e; }
       .card:focus-visible { outline: 3px solid #ffd567; outline-offset: -3px; }
+      .rules-editor { padding:12px; max-height:min(65vh,620px); overflow-y:auto; }
+      .rules-editor h3, .rules-editor h4 { margin:0 0 8px; color:#006a51; }
+      .rules-enabled { display:flex; align-items:center; gap:6px; font-weight:700; }
+      .rules-source { display:block; box-sizing:border-box; width:100%; min-height:210px; resize:vertical; font:12px/1.7 ui-monospace,monospace; background:#eeffee; color:#234f43; border:1px solid #008f6f; border-radius:6px; padding:8px; }
+      .rules-source:focus-visible { outline:3px solid #ffd567; }
+      .rules-actions { display:flex; gap:8px; margin:9px 0; }
+      .rules-help, .rules-message { font-size:11px; }
+      .rules-errors { white-space:pre-wrap; color:#a42929; font-size:11px; }
+      .rules-guide { background:#eeffee; font-size:11px; }
+      .rules-guide p, .rules-guide pre { margin:8px; white-space:pre-wrap; overflow-wrap:anywhere; }
+      .rules-preview-row, .name-rule-labels { display:flex; gap:4px; flex-wrap:wrap; align-items:center; }
+      .rules-preview-row { padding:6px 0; border-bottom:1px solid #95d8b7; }
+      .name-rule-labels { margin-top:4px; }
+      .name-rule-badge { display:inline-block; font-size:10px; line-height:1.5; background:#eeffee; border:1px solid currentColor; padding:0 4px; border-radius:4px; overflow-wrap:anywhere; }
       @media (max-width: 380px) { ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } h2 { font-size: 17px; } }
-      @media (max-height: 500px) { .body { max-height: calc(100dvh - 190px); } }
+      @media (max-height: 500px) { .body, .rules-editor { max-height: calc(100dvh - 190px); } }
     `;
     const el = (tag, cls, text) => {
       const node = document.createElement(tag);
@@ -165,17 +179,21 @@
     const footer = el('footer');
     const note = el('span', 'note', 'Only data received by this tab.');
     const exportButton = el('button', 'export', 'Save JSON');
-    footer.append(note, exportButton);
+    const labelsButton = el('button', 'export', 'Name labels');
+    labelsButton.setAttribute('aria-expanded', 'false');
+    footer.append(note, labelsButton, exportButton);
     panel.append(header, toolbar, body, footer);
     shadow.append(style, panel);
     document.documentElement.append(host);
-    let collapsed = true;
+    let collapsed = true, editingRules = false;
     body.hidden = footer.hidden = toolbar.hidden = true;
     const expanded = new Map();
     toggle.onclick = () => {
       collapsed = !collapsed;
       panel.classList.toggle('is-collapsed', collapsed);
-      body.hidden = footer.hidden = toolbar.hidden = collapsed;
+      footer.hidden = toolbar.hidden = collapsed;
+      body.hidden = collapsed || editingRules;
+      nameLabels.editor.hidden = collapsed || !editingRules;
       toggle.textContent = collapsed ? '+' : '−';
       toggle.setAttribute('aria-label', collapsed ? 'Expand inspector' : 'Collapse inspector');
       toggle.setAttribute('aria-expanded', String(!collapsed));
@@ -230,6 +248,17 @@
       return row;
     };
     const hover = GodfieldHover.create({shadow, renderItem, getState: () => state, language});
+    const nameLabels = GodfieldNameLabels.create({getState:() => state, language, onChange:() => render()});
+    nameLabels.editor.hidden = true;
+    panel.insertBefore(nameLabels.editor, body);
+    labelsButton.onclick = () => {
+      editingRules = !editingRules;
+      body.hidden = editingRules;
+      nameLabels.editor.hidden = !editingRules;
+      labelsButton.textContent = editingRules ? 'Back to items' : 'Name labels';
+      labelsButton.setAttribute('aria-expanded', String(editingRules));
+      if (editingRules) { hover.hide(); nameLabels.editor.querySelector('textarea').focus(); }
+    };
     render = () => {
       autoOption.textContent = `Auto · ${GODFIELD_CATALOG.languages[gameLanguage].label}`;
       body.lang = language();
@@ -253,8 +282,12 @@
         details.addEventListener('toggle', () => { if (details.isConnected) expanded.set(key, details.open); });
         const summary = el('summary');
         summary.dataset.player = key;
-        summary.append(el('span', 'name', player.name || `Player ${key}`),
+        const playerName = el('span', 'name', player.name || `Player ${key}`);
+        summary.append(playerName,
           el('span', 'count', player.itemsAvailable ? `${player.items.length} ${player.items.length === 1 ? 'item' : 'items'}` : 'Unavailable'));
+        const labels = el('div', 'name-rule-labels');
+        nameLabels.decorate(playerName, labels, player);
+        if (labels.childNodes.length) summary.append(labels);
         const stats = el('div', 'stats');
         for (const key of ['hp', 'mp', 'cp']) if (Number.isSafeInteger(player[key])) {
           const label = key === 'cp' ? GODFIELD_CATALOG.languages[language()].stats.cp : key.toUpperCase();
@@ -275,6 +308,7 @@
       }
       body.scrollTop = scroll;
       hover.update();
+      nameLabels.update();
       if (focusedPlayer !== undefined) {
         [...body.querySelectorAll('summary')].find(s => s.dataset.player === focusedPlayer)?.focus({ preventScroll: true });
       }
