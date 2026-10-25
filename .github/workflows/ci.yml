@@ -24,6 +24,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm test
+      - run: python3 tests/randomness_audit_test.py
       - run: npm run check:userscript
       - run: npm run test:browser:all
       - run: npm run package

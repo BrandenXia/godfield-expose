@@ -148,13 +148,15 @@ The ZIP contains only extension files; `dist/godfield-room-inspector.user.js` is
 
 ## Project files
 
+The [randomness and seed-recovery investigation](docs/randomness.md) documents the published gift weights, controlled Training experiments, and a bounded timestamp-seed search. No seed or next-result predictor has been established. Its offline checks run with `python3 tests/randomness_audit_test.py`; the separate live probe requires explicit command-line opt-in.
+
 - `extension/`: unpacked browser extension.
 - `userscript/`: generated, installable Tampermonkey userscript.
 - `tests/`: unit tests and offline sprite fixtures.
 - `scripts/`: browser checks, catalog/userscript generation, and release packaging.
 - `docs/`: investigation notes and a curated preview.
 
-Generated ZIPs, test screenshots, browser profiles, and local captures are excluded from Git.
+Generated ZIPs, test screenshots, browser profiles, and local captures are excluded from Git. Manually reviewed, sanitized randomness-research observations are retained under `docs/research/`.
 
 ## Attribution
 

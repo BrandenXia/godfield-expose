@@ -1,0 +1,311 @@
+{
+  "schemaVersion": 1,
+  "experiment": "constant-client-rng-two-training-deals",
+  "clientRandomValue": 0.125,
+  "sameHands": false,
+  "results": [
+    {
+      "trial": 1,
+      "calls": 380,
+      "sites": {
+        "main.dart.js:429:20": 380
+      },
+      "captures": [
+        {
+          "updateCount": 1,
+          "hands": [
+            [
+              149,
+              104,
+              203,
+              38,
+              5,
+              50,
+              78,
+              47,
+              211
+            ],
+            [
+              135,
+              66,
+              80,
+              36,
+              68,
+              23,
+              105,
+              192,
+              21
+            ]
+          ],
+          "events": [
+            {
+              "action": "startGame",
+              "modelId": null
+            },
+            {
+              "action": "gift",
+              "modelId": 149
+            },
+            {
+              "action": "gift",
+              "modelId": 104
+            },
+            {
+              "action": "gift",
+              "modelId": 203
+            },
+            {
+              "action": "gift",
+              "modelId": 38
+            },
+            {
+              "action": "gift",
+              "modelId": 5
+            },
+            {
+              "action": "gift",
+              "modelId": 50
+            },
+            {
+              "action": "gift",
+              "modelId": 78
+            },
+            {
+              "action": "gift",
+              "modelId": 47
+            },
+            {
+              "action": "gift",
+              "modelId": 211
+            },
+            {
+              "action": "advanceGF",
+              "modelId": null
+            }
+          ],
+          "randomCalls": 328
+        }
+      ],
+      "schema": [
+        "game",
+        "game.attackTurnPlayerId",
+        "game.diseasePlayerId",
+        "game.events",
+        "game.events[].action",
+        "game.events[].item",
+        "game.events[].item.id",
+        "game.events[].item.modelId",
+        "game.events[].playerId",
+        "game.gf",
+        "game.guardianPlayerIds",
+        "game.players",
+        "game.players[].cp",
+        "game.players[].hp",
+        "game.players[].id",
+        "game.players[].isBot",
+        "game.players[].items",
+        "game.players[].items[].id",
+        "game.players[].items[].modelId",
+        "game.players[].mp",
+        "game.players[].name",
+        "game.players[].userId",
+        "game.updateCount",
+        "game.updatedAt",
+        "game.updatedAt.nanoseconds",
+        "game.updatedAt.seconds",
+        "updatedAt",
+        "updatedAt.nanoseconds",
+        "updatedAt.seconds",
+        "userCount",
+        "users",
+        "users[].id",
+        "users[].name"
+      ],
+      "requests": [
+        {
+          "endpoint": "/update-account",
+          "fields": [],
+          "commandFields": []
+        },
+        {
+          "endpoint": "/create-room",
+          "fields": [
+            "mode",
+            "userName"
+          ],
+          "commandFields": []
+        },
+        {
+          "endpoint": "/start-game",
+          "fields": [
+            "gf",
+            "lang",
+            "mode",
+            "playerCount",
+            "roomId"
+          ],
+          "commandFields": []
+        }
+      ]
+    },
+    {
+      "trial": 2,
+      "calls": 387,
+      "sites": {
+        "main.dart.js:429:20": 387
+      },
+      "captures": [
+        {
+          "updateCount": 1,
+          "hands": [
+            [
+              195,
+              171,
+              118,
+              66,
+              114,
+              44,
+              16,
+              134,
+              0
+            ],
+            [
+              199,
+              154,
+              161,
+              47,
+              32,
+              149,
+              128,
+              137,
+              61
+            ]
+          ],
+          "events": [
+            {
+              "action": "startGame",
+              "modelId": null
+            },
+            {
+              "action": "gift",
+              "modelId": 199
+            },
+            {
+              "action": "gift",
+              "modelId": 154
+            },
+            {
+              "action": "gift",
+              "modelId": 161
+            },
+            {
+              "action": "gift",
+              "modelId": 47
+            },
+            {
+              "action": "gift",
+              "modelId": 32
+            },
+            {
+              "action": "gift",
+              "modelId": 149
+            },
+            {
+              "action": "gift",
+              "modelId": 128
+            },
+            {
+              "action": "gift",
+              "modelId": 137
+            },
+            {
+              "action": "gift",
+              "modelId": 61
+            },
+            {
+              "action": "advanceGF",
+              "modelId": null
+            },
+            {
+              "action": "useAttackItems",
+              "modelId": null
+            },
+            {
+              "action": "setTargetPlayer",
+              "modelId": null
+            }
+          ],
+          "randomCalls": 328
+        }
+      ],
+      "schema": [
+        "game",
+        "game.attackTurnPlayerId",
+        "game.attacks",
+        "game.attacks[].itemModelIds",
+        "game.attacks[].playerId",
+        "game.attacks[].targetPlayerId",
+        "game.diseasePlayerId",
+        "game.events",
+        "game.events[].action",
+        "game.events[].item",
+        "game.events[].item.id",
+        "game.events[].item.modelId",
+        "game.events[].items",
+        "game.events[].items[].id",
+        "game.events[].items[].modelId",
+        "game.events[].playerId",
+        "game.gf",
+        "game.guardianPlayerIds",
+        "game.players",
+        "game.players[].cp",
+        "game.players[].hp",
+        "game.players[].id",
+        "game.players[].isBot",
+        "game.players[].items",
+        "game.players[].items[].id",
+        "game.players[].items[].modelId",
+        "game.players[].mp",
+        "game.players[].name",
+        "game.players[].userId",
+        "game.updateCount",
+        "game.updatedAt",
+        "game.updatedAt.nanoseconds",
+        "game.updatedAt.seconds",
+        "updatedAt",
+        "updatedAt.nanoseconds",
+        "updatedAt.seconds",
+        "userCount",
+        "users",
+        "users[].id",
+        "users[].name"
+      ],
+      "requests": [
+        {
+          "endpoint": "/update-account",
+          "fields": [],
+          "commandFields": []
+        },
+        {
+          "endpoint": "/create-room",
+          "fields": [
+            "mode",
+            "userName"
+          ],
+          "commandFields": []
+        },
+        {
+          "endpoint": "/start-game",
+          "fields": [
+            "gf",
+            "lang",
+            "mode",
+            "playerCount",
+            "roomId"
+          ],
+          "commandFields": []
+        }
+      ]
+    }
+  ]
+}

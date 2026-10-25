@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "catalogSha256": "bb1b433ba6d336765589aec940cca0bac8b7c0bdcee33969c207a17365509188",
+  "itemModels": 296,
+  "positiveGiftModels": 237,
+  "totalGiftWeight": 500,
+  "categoryGiftWeights": {
+    "armor": 147,
+    "devils": 0,
+    "guardians": 0,
+    "miracles": 30,
+    "phenomena": 0,
+    "sundries": 82,
+    "trade": 60,
+    "weapons": 181
+  },
+  "iidIllustrationOnly": {
+    "twoGiftsSameModelProbability": 0.012696,
+    "duplicateWithinNineProbability": 0.3612786753695384,
+    "entropyBitsPerGift": 7.100551382766201
+  },
+  "clientSha256": "764a50524e4b6b3f510415da7128abd8ad99dcb87b45b8572d98ddd96889cabd",
+  "literalMathRandomLines": [
+    429,
+    8267
+  ],
+  "probeSha256": "8032bfaec4207fe921a29347c1b0c4e34dde857f2e86ce5a5da85cad4e327287",
+  "timestampSeedTests": [
+    {
+      "trial": 1,
+      "observedGiftModels": [
+        21,
+        191,
+        195,
+        30,
+        191,
+        50,
+        165,
+        32,
+        10
+      ],
+      "seedWindowsInclusive": {
+        "epoch-milliseconds": [
+          1792947896727,
+          1792947907263
+        ],
+        "epoch-seconds": [
+          1792947896,
+          1792947908
+        ]
+      },
+      "maximumInitialSkippedOutputs": 32,
+      "testedHypotheses": 3481500,
+      "fitGiftCount": 6,
+      "holdoutGiftCount": 3,
+      "fittedCandidates": [],
+      "holdoutMatches": []
+    },
+    {
+      "trial": 2,
+      "observedGiftModels": [
+        191,
+        26,
+        200,
+        57,
+        70,
+        29,
+        192,
+        118,
+        123
+      ],
+      "seedWindowsInclusive": {
+        "epoch-milliseconds": [
+          1792947901162,
+          1792947911566
+        ],
+        "epoch-seconds": [
+          1792947901,
+          1792947912
+        ]
+      },
+      "maximumInitialSkippedOutputs": 32,
+      "testedHypotheses": 3437610,
+      "fitGiftCount": 6,
+      "holdoutGiftCount": 3,
+      "fittedCandidates": [],
+      "holdoutMatches": []
+    }
+  ]
+}

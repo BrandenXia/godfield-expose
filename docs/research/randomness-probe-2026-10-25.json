@@ -1,0 +1,324 @@
+{
+  "schemaVersion": 2,
+  "experiment": "constant-client-rng-two-training-deals",
+  "clientRandomValue": 0.125,
+  "sameHands": false,
+  "results": [
+    {
+      "trial": 1,
+      "clientHash": "764a50524e4b6b3f510415da7128abd8ad99dcb87b45b8572d98ddd96889cabd",
+      "calls": 385,
+      "sites": {
+        "main.dart.js:429:20": 385
+      },
+      "captures": [
+        {
+          "updateCount": 1,
+          "receivedAtMs": 1792947902263,
+          "serverUpdatedAtMs": 1792947902013.967,
+          "hands": [
+            [
+              4,
+              215,
+              70,
+              63,
+              118,
+              195,
+              181,
+              3,
+              32
+            ],
+            [
+              21,
+              191,
+              195,
+              30,
+              191,
+              50,
+              165,
+              32,
+              10
+            ]
+          ],
+          "events": [
+            {
+              "action": "startGame",
+              "modelId": null
+            },
+            {
+              "action": "gift",
+              "modelId": 21
+            },
+            {
+              "action": "gift",
+              "modelId": 191
+            },
+            {
+              "action": "gift",
+              "modelId": 195
+            },
+            {
+              "action": "gift",
+              "modelId": 30
+            },
+            {
+              "action": "gift",
+              "modelId": 191
+            },
+            {
+              "action": "gift",
+              "modelId": 50
+            },
+            {
+              "action": "gift",
+              "modelId": 165
+            },
+            {
+              "action": "gift",
+              "modelId": 32
+            },
+            {
+              "action": "gift",
+              "modelId": 10
+            },
+            {
+              "action": "advanceGF",
+              "modelId": null
+            },
+            {
+              "action": "useAttackItems",
+              "modelId": null
+            },
+            {
+              "action": "boostMP",
+              "modelId": null
+            },
+            {
+              "action": "advanceGF",
+              "modelId": null
+            }
+          ],
+          "randomCalls": 328
+        }
+      ],
+      "schema": [
+        "game",
+        "game.attackTurnPlayerId",
+        "game.diseasePlayerId",
+        "game.events",
+        "game.events[].action",
+        "game.events[].item",
+        "game.events[].item.id",
+        "game.events[].item.modelId",
+        "game.events[].items",
+        "game.events[].items[].id",
+        "game.events[].items[].modelId",
+        "game.events[].mp",
+        "game.events[].playerId",
+        "game.gf",
+        "game.guardianPlayerIds",
+        "game.players",
+        "game.players[].cp",
+        "game.players[].hp",
+        "game.players[].id",
+        "game.players[].isBot",
+        "game.players[].items",
+        "game.players[].items[].id",
+        "game.players[].items[].modelId",
+        "game.players[].mp",
+        "game.players[].name",
+        "game.players[].userId",
+        "game.updateCount",
+        "game.updatedAt",
+        "game.updatedAt.nanoseconds",
+        "game.updatedAt.seconds",
+        "updatedAt",
+        "updatedAt.nanoseconds",
+        "updatedAt.seconds",
+        "userCount",
+        "users",
+        "users[].id",
+        "users[].name"
+      ],
+      "requests": [
+        {
+          "endpoint": "/update-account",
+          "fields": [],
+          "commandFields": [],
+          "observedAtMs": 1792947899162
+        },
+        {
+          "endpoint": "/create-room",
+          "fields": [
+            "mode",
+            "userName"
+          ],
+          "commandFields": [],
+          "observedAtMs": 1792947899418
+        },
+        {
+          "endpoint": "/start-game",
+          "fields": [
+            "gf",
+            "lang",
+            "mode",
+            "playerCount",
+            "roomId"
+          ],
+          "commandFields": [],
+          "observedAtMs": 1792947901727
+        }
+      ]
+    },
+    {
+      "trial": 2,
+      "clientHash": "764a50524e4b6b3f510415da7128abd8ad99dcb87b45b8572d98ddd96889cabd",
+      "calls": 380,
+      "sites": {
+        "main.dart.js:429:20": 380
+      },
+      "captures": [
+        {
+          "updateCount": 1,
+          "receivedAtMs": 1792947906566,
+          "serverUpdatedAtMs": 1792947906431.601,
+          "hands": [
+            [
+              191,
+              26,
+              200,
+              57,
+              70,
+              29,
+              192,
+              118,
+              123
+            ],
+            [
+              123,
+              133,
+              134,
+              45,
+              159,
+              4,
+              201,
+              20,
+              4
+            ]
+          ],
+          "events": [
+            {
+              "action": "startGame",
+              "modelId": null
+            },
+            {
+              "action": "gift",
+              "modelId": 191
+            },
+            {
+              "action": "gift",
+              "modelId": 26
+            },
+            {
+              "action": "gift",
+              "modelId": 200
+            },
+            {
+              "action": "gift",
+              "modelId": 57
+            },
+            {
+              "action": "gift",
+              "modelId": 70
+            },
+            {
+              "action": "gift",
+              "modelId": 29
+            },
+            {
+              "action": "gift",
+              "modelId": 192
+            },
+            {
+              "action": "gift",
+              "modelId": 118
+            },
+            {
+              "action": "gift",
+              "modelId": 123
+            },
+            {
+              "action": "advanceGF",
+              "modelId": null
+            }
+          ],
+          "randomCalls": 328
+        }
+      ],
+      "schema": [
+        "game",
+        "game.attackTurnPlayerId",
+        "game.diseasePlayerId",
+        "game.events",
+        "game.events[].action",
+        "game.events[].item",
+        "game.events[].item.id",
+        "game.events[].item.modelId",
+        "game.events[].playerId",
+        "game.gf",
+        "game.guardianPlayerIds",
+        "game.players",
+        "game.players[].cp",
+        "game.players[].hp",
+        "game.players[].id",
+        "game.players[].isBot",
+        "game.players[].items",
+        "game.players[].items[].id",
+        "game.players[].items[].modelId",
+        "game.players[].mp",
+        "game.players[].name",
+        "game.players[].userId",
+        "game.updateCount",
+        "game.updatedAt",
+        "game.updatedAt.nanoseconds",
+        "game.updatedAt.seconds",
+        "updatedAt",
+        "updatedAt.nanoseconds",
+        "updatedAt.seconds",
+        "userCount",
+        "users",
+        "users[].id",
+        "users[].name"
+      ],
+      "requests": [
+        {
+          "endpoint": "/update-account",
+          "fields": [],
+          "commandFields": [],
+          "observedAtMs": 1792947903679
+        },
+        {
+          "endpoint": "/create-room",
+          "fields": [
+            "mode",
+            "userName"
+          ],
+          "commandFields": [],
+          "observedAtMs": 1792947903855
+        },
+        {
+          "endpoint": "/start-game",
+          "fields": [
+            "gf",
+            "lang",
+            "mode",
+            "playerCount",
+            "roomId"
+          ],
+          "commandFields": [],
+          "observedAtMs": 1792947906162
+        }
+      ]
+    }
+  ]
+}
