@@ -183,7 +183,7 @@
     const note = el('span', 'note', 'Only data received by this tab.');
     const exportButton = el('button', 'export', 'Save JSON');
     const labelsButton = el('button', 'export', 'Name labels');
-    const oddsButton = el('button', 'export', 'Odds ↗');
+    const oddsButton = el('button', 'export', '▥ Odds');
     oddsButton.setAttribute('aria-label', 'Open probability dashboard');
     labelsButton.setAttribute('aria-expanded', 'false');
     footer.append(note, labelsButton, oddsButton, exportButton);
@@ -253,11 +253,9 @@
       return row;
     };
     const hover = GodfieldHover.create({shadow, renderItem, getState: () => state, language});
-    probabilityDashboard = GodfieldProbabilityDashboard.create({language});
+    probabilityDashboard = GodfieldProbabilityDashboard.create({language, onOpen: () => { if (!collapsed) toggle.click(); }});
     probabilityDashboard.observe(state);
-    oddsButton.onclick = () => {
-      if (!probabilityDashboard.open()) status.textContent = 'Allow popups for God Field, then select Odds again.';
-    };
+    oddsButton.onclick = () => probabilityDashboard.open();
     const nameLabels = GodfieldNameLabels.create({getState:() => state, language, onChange:() => render()});
     nameLabels.editor.hidden = true;
     panel.insertBefore(nameLabels.editor, body);

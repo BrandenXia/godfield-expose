@@ -1,6 +1,8 @@
 # Bayesian probability dashboard
 
-Open the inspector with **+** or **Alt+I**, then select **Odds ↗**. The dashboard opens in a separate window; keep the game tab open for updates. Allow that popup if your browser blocks it. Both the extension and userscript include it.
+Click the **chart icon on the right edge** of God Field, or open the inspector with **+** / **Alt+I** and select **Odds**. The dashboard docks inside the game tab. Both the extension and userscript include it.
+
+Use its icon tabs for **Gift odds**, **Event chance**, and **Settings**. Gift odds include original item artwork and translated names; missing artwork shows a question mark beside the name. Settings contains the pool, prior strength, horizon, clear/export buttons, and detailed observation-quality counters. Close with **×** or **Esc** to return to the small edge icon. Arrow Up/Down and Home/End navigate the tabs when a tab has keyboard focus. The game remains clickable outside the sidebar; on narrow screens the drawer uses most of the viewport.
 
 ## What it predicts
 
@@ -65,7 +67,7 @@ These trials are **not automatically collected**. Keep trials with different bas
 
 ## Storage and export
 
-Observation counts stay in memory in the game tab. Reloading or accepting a new room subscription resets them. **Clear observations** clears both gift pools and quality counters while preserving the deduplication cursor, so replaying the current snapshot does not count it again. Closing and reopening the dashboard retains the tab's counts. An old dashboard is marked stale when the game tab reloads or closes; reopen it from the game to resume updates.
+Observation counts stay in memory in the game tab. Reloading or accepting a new room subscription resets them. **Clear observations** clears both gift pools and quality counters while preserving the deduplication cursor, so replaying the current snapshot does not count it again. Closing and reopening the sidebar retains the tab's counts and manual inputs. Collection continues while it is closed. Reloading the game removes the old sidebar and starts a fresh collector; saved preferences remain.
 
 The selected pool, prior strength, tracked item, and horizon persist in local browser storage. Manual trials are kept only in memory. **Export estimates** downloads JSON containing settings, aggregate model-ID counts, quality counters, subscription/version cursors, manual inputs, and estimated probabilities. It contains no player names, account IDs, room IDs, authentication tokens, or raw room snapshots. There is no automatic upload.
 
@@ -77,4 +79,4 @@ Rechecked October 26, 2026 against the [official client](https://godfield.net/ma
 - English catalog SHA-256: `bb1b433ba6d336765589aec940cca0bac8b7c0bdcee33969c207a17365509188`.
 - The client's `A.ft.fs` update handler (line 12329 onward in this build) ignores old versions and processes event batches on consecutive updates, reconstructing state after gaps. The collector follows a similarly conservative version boundary.
 
-Unit tests cover posterior normalization and shrinkage, analytic Beta quantiles, posterior-predictive horizons, manual conjugate updates, cache/pending-write exclusion, deduplication, version regression, gaps, resets, and sanitized event extraction. Browser fixtures cover both builds, translated search, controls, export, popup lifecycle, saved settings, and narrow screens. A fresh live Training opening counted nine gifts, one opening, and no update gaps; no combat commands were submitted. This is an integration check, not evidence that forecasts are calibrated or that a seed was recovered.
+Unit tests cover posterior normalization and shrinkage, analytic Beta quantiles, posterior-predictive horizons, manual conjugate updates, cache/pending-write exclusion, deduplication, version regression, gaps, resets, and sanitized event extraction. Browser fixtures cover both builds, translated search, controls, export, icon tabs and keyboard navigation, artwork/fallback, game click passthrough, collection while closed, saved settings, and portrait/landscape layouts. A fresh live Training opening counted nine gifts, one opening, and no update gaps; no combat commands were submitted. This is an integration check, not evidence that forecasts are calibrated or that a seed was recovered.

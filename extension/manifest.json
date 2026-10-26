@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "God Field Room Inspector",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Show player items present in the room snapshots your God Field client receives.",
   "minimum_chrome_version": "111",
   "content_scripts": [

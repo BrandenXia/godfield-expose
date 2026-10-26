@@ -82,13 +82,15 @@ The first matching rule sets the name color; all matches add badges. Combine con
 
 ## Probability dashboard
 
-Open the inspector → **Odds ↗** for a separate Bayesian dashboard. It ranks next-gift probabilities using the published item weights and explicit gift events observed by your tab. Track an item to see its rate, 95% credible range, and chance of appearing at least once in the next several gifts. Opening and later gift pools stay separate; prior strength is adjustable.
+Click the **chart icon on the right edge** (or inspector → **Odds**) to open the Bayesian dashboard beside the game. Icon tabs switch between gift odds, manual event chances, and settings; item artwork appears beside the forecasts. Close it with **×** or **Esc**; observations continue while it is closed.
+
+It ranks next-gift probabilities using the published item weights and explicit gift events observed by your tab. Track an item to see its rate, 95% credible range, and chance of appearing at least once in the next several gifts. Opening and later gift pools stay separate; prior strength is adjustable.
 
 A **manual event calculator** estimates yes/no outcomes from a prior and success/failure counts you enter. Item names follow your selected language, and search accepts all eight translations. Counts stay in memory; dashboard settings persist. You can export aggregate estimates as JSON.
 
 These are probability estimates under a stable-distribution assumption, not seed recovery or a guaranteed next-item prediction. Cached snapshots, duplicate versions, and missing event batches do not become new draws. See the [model, collection rules, and limitations](docs/probability-dashboard.md).
 
-<img src="docs/images/probability-dashboard.png" alt="Separate Bayesian dashboard showing ranked gift probabilities, a tracked item forecast, category odds, and a manual event calculator" width="1000">
+<img src="docs/images/probability-dashboard.png" alt="In-game probability sidebar with icon navigation, item artwork, and Bayesian gift forecasts" width="480">
 
 ## Item languages and artwork
 
@@ -119,7 +121,7 @@ The userscript bundles the same source files and catalogs into one file. Its hoo
 
 `matchups.js` compares item metadata with received inventories, team assignments, MP, and recognized curses.
 
-`probability.js` collects explicit gift observations and calculates Dirichlet/Beta posteriors. `probability-dashboard.js` renders the separate dashboard window and its manual event calculator.
+`probability.js` collects explicit gift observations and calculates Dirichlet/Beta posteriors. `probability-dashboard.js` renders the in-game dashboard sidebar and its manual event calculator.
 
 `visibility.js` reveals known dream items in their native cards and suppresses native fog masking. It preserves received curse/item records and the game’s existing command handlers. It neither removes server-side curses nor guarantees a chosen target under fog. Unknown client view layouts are left alone.
 
@@ -147,7 +149,7 @@ npm run test:browser
 
 The browser tests load the unpacked extension into a temporary Chromium profile and delete that profile afterward. They check both JavaScript worlds, UI behavior, and exports. Screenshots are in `test-results/inspector.png` and `test-results/inspector-mobile.png`. They also check all eight languages, automatic locale changes, manual overrides, successful image loading, and broken-image fallback. Hover tests cover native player/card association, duplicate names, identical dream appearances, reordered cards, pinning, keyboard access, live updates, stale data, click passthrough, room cleanup, and narrow-screen positioning. Hover screenshots are saved alongside the panel screenshots. Matchup checks cover teams, MP changes, reusable miracles, ambiguous ownership, translated names, pinned updates, and mobile layout; screenshots use the `matchups-` prefix. Native visibility fixtures verify direct dream artwork/stats, original snapshot preservation, item clicks, fog transitions, status updates, target availability, image fallback, and unsupported view layouts. Their screenshots use the `native-visibility` prefix.
 
-Name-label fixtures verify rule editing, live native badges, saved settings, and landscape layout. Probability fixtures check counting, pool selection, Bayesian controls, translated search, export, popup lifecycle, and mobile layout; screenshots use the `probability-dashboard` prefix.
+Name-label fixtures verify rule editing, live native badges, saved settings, and landscape layout. Probability fixtures check counting, pool selection, Bayesian controls, translated search, export, icon-tab keyboard navigation, item artwork, collection while closed, and portrait/landscape layout; screenshots use the `probability-dashboard` prefix.
 
 Run the same browser checks against the generated userscript, or run the extension and userscript suites in sequence:
 
