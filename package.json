@@ -1,13 +1,13 @@
 {
   "name": "godfield-room-inspector",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "description": "Inspect item data already delivered to a God Field room participant.",
   "scripts": {
     "test": "node --test tests/*.test.cjs",
-    "test:browser": "node scripts/browser-test.cjs && node scripts/hover-test.cjs && node scripts/visibility-test.cjs && node scripts/name-labels-test.cjs",
-    "test:browser:userscript": "node scripts/browser-test.cjs --userscript && node scripts/hover-test.cjs --userscript && node scripts/visibility-test.cjs --userscript && node scripts/name-labels-test.cjs --userscript",
-    "test:browser:all": "node scripts/browser-test.cjs --all && node scripts/hover-test.cjs --all && node scripts/visibility-test.cjs --all && node scripts/name-labels-test.cjs --all",
+    "test:browser": "node scripts/browser-test.cjs && node scripts/hover-test.cjs && node scripts/visibility-test.cjs && node scripts/name-labels-test.cjs && node scripts/probability-test.cjs",
+    "test:browser:userscript": "node scripts/browser-test.cjs --userscript && node scripts/hover-test.cjs --userscript && node scripts/visibility-test.cjs --userscript && node scripts/name-labels-test.cjs --userscript && node scripts/probability-test.cjs --userscript",
+    "test:browser:all": "node scripts/browser-test.cjs --all && node scripts/hover-test.cjs --all && node scripts/visibility-test.cjs --all && node scripts/name-labels-test.cjs --all && node scripts/probability-test.cjs --all",
     "build:userscript": "python3 scripts/build-userscript.py",
     "check:userscript": "python3 scripts/build-userscript.py --check",
     "package": "python3 scripts/package.py"

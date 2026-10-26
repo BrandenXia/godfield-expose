@@ -1,0 +1,76 @@
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os');
+async function run(mode){
+ const profile=await fs.mkdtemp(path.join(os.tmpdir(),'godfield-odds-'));let context;
+ const userscript=mode==='userscript',suffix=userscript?'-userscript':'';
+ try{
+  const extension=path.resolve(__dirname,'../extension');
+  context=await chromium.launchPersistentContext(profile,{channel:'chromium',headless:true,args:userscript?['--disable-extensions']:[`--disable-extensions-except=${extension}`,`--load-extension=${extension}`],viewport:{width:1280,height:900}});
+  if(userscript)await context.addInitScript({path:path.resolve(__dirname,'../userscript/godfield-room-inspector.user.js')});
+  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route('https://godfield.net/**',route=>{
+   if(new URL(route.request().url()).pathname.startsWith('/images/'))return route.fulfill({status:404,body:''});
+   return route.fulfill({contentType:'text/html',body:`<!doctype html><html><body style="background:#55bb99"><div id="main"></div><script>
+   window.subscriptions=0;window.commands=0;
+   window.firebase={onSnapshot(ref,next){subscriptions++;window.deliver=next;return()=>{};}};
+   firebase.onSnapshot({path:'modes/private/rooms/fixture'},()=>{});
+   window.send=(v,models,cache=false)=>deliver({data:()=>({users:[{id:'private-account'}],game:{updateCount:v,updatedAt:{seconds:100+v,nanoseconds:0},players:[{id:1,name:'Local',hp:40,items:[{id:1,modelId:112}]}],events:[...(v===1?[{action:'startGame'}]:[]),...models.map(modelId=>({action:'gift',item:{modelId,userId:'private-account'}}))]}}),metadata:{fromCache:cache}});
+   send(1,[112,3,112],true);
+   </script></body></html>`});
+  });
+  await page.goto('https://godfield.net/?lang=en');
+  const inspector=page.locator('#godfield-room-inspector');await inspector.getByRole('button',{name:'Expand inspector'}).click();
+  const opened=page.waitForEvent('popup');await inspector.getByRole('button',{name:'Open probability dashboard'}).click();
+  const dashboard=await opened;dashboard.on('pageerror',e=>errors.push(e.message));
+  await dashboard.getByRole('heading',{name:'Probability dashboard',exact:true}).waitFor();
+  await dashboard.getByText(/Prior only — no gifts counted/).waitFor();
+  assert.equal(await dashboard.locator('.metric strong').first().innerText(),'0');
+  await page.evaluate(()=>send(1,[112,3,112]));
+  await dashboard.waitForFunction(()=>document.querySelector('.metric strong')?.textContent==='3');
+  await dashboard.locator('.big').getByText('0.60%',{exact:true}).waitFor();
+  await page.evaluate(()=>{send(1,[112,3,112]);window.postMessage({channel:'godfield-room-inspector-v1',type:'ready'},location.origin);});
+  await dashboard.waitForTimeout(100);assert.equal(await dashboard.locator('.metric strong').first().innerText(),'3');
+  await dashboard.getByLabel('Prior strength · equivalent gifts').fill('100');await dashboard.getByLabel('Prior strength · equivalent gifts').dispatchEvent('change');
+  await dashboard.locator('.big').getByText('2.14%',{exact:true}).waitFor();
+  await dashboard.getByLabel('Search items').fill('太阳守护');
+  assert.equal(await dashboard.locator('tbody tr').count(),1);await dashboard.locator('td.item-name').filter({hasText:'Sun Amulet'}).waitFor();
+  await dashboard.getByLabel('Search items').fill('');
+  await page.evaluate(()=>{send(2,[208]);send(4,[112]);send(5,[3],true);});
+  await dashboard.getByLabel('Observed gift pool').selectOption('later');
+  await dashboard.waitForFunction(()=>document.querySelector('.metric strong')?.textContent==='1');
+  assert.equal(await dashboard.locator('.metric strong').nth(2).innerText(),'1');
+  await dashboard.getByText('Cached snapshot · estimates unchanged',{exact:true}).waitFor();
+  await page.evaluate(()=>send(5,[3]));await dashboard.waitForFunction(()=>document.querySelector('.metric strong')?.textContent==='2');
+  await dashboard.getByLabel('Successes',{exact:true}).fill('8');await dashboard.getByLabel('Failures',{exact:true}).fill('2');
+  await dashboard.locator('.big').getByText('60.00%',{exact:true}).waitFor();
+  await dashboard.getByLabel('Look ahead · gifts').fill('0');await dashboard.getByLabel('Look ahead · gifts').dispatchEvent('change');
+  await dashboard.getByText(/Use prior strength 10/).waitFor();
+  await dashboard.getByLabel('Look ahead · gifts').fill('9');await dashboard.getByLabel('Look ahead · gifts').dispatchEvent('change');
+  await dashboard.getByLabel('Failures',{exact:true}).fill('-1');await dashboard.getByText(/Enter valid trial counts/).waitFor();
+  await dashboard.getByLabel('Failures',{exact:true}).fill('2');
+  const downloadPromise=dashboard.waitForEvent('download');await dashboard.getByRole('button',{name:'Export estimates'}).click();
+  const download=await downloadPromise;const exported=await fs.readFile(await download.path(),'utf8');assert.ok(!exported.includes('private-account'));assert.ok(!exported.includes('roomId'));
+  assert.equal(JSON.parse(exported).observations.later[207],1);
+  await dashboard.getByRole('button',{name:'Clear observations'}).click();
+  await page.evaluate(()=>send(5,[3]));await dashboard.waitForTimeout(100);assert.equal(await dashboard.locator('.metric strong').first().innerText(),'0');
+  await page.evaluate(()=>{firebase.onSnapshot({path:'modes/private/rooms/second'},()=>{});send(1,[112,208,3,3,113,130,195,16,16]);});
+  await dashboard.getByLabel('Observed gift pool').selectOption('opening');
+  await dashboard.waitForFunction(()=>document.querySelector('.metric strong')?.textContent==='9');
+  await fs.mkdir('test-results',{recursive:true});await dashboard.screenshot({path:`test-results/probability-dashboard${suffix}.png`,fullPage:true});
+  await dashboard.setViewportSize({width:390,height:844});await dashboard.screenshot({path:`test-results/probability-dashboard-mobile${suffix}.png`,fullPage:true});
+  assert.ok(await dashboard.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await dashboard.close();
+  const reopened=page.waitForEvent('popup');await inspector.getByRole('button',{name:'Open probability dashboard'}).click();
+  const second=await reopened;await second.waitForFunction(()=>document.querySelector('.metric strong')?.textContent==='9');
+  await page.reload();await inspector.getByRole('button',{name:'Expand inspector'}).click();
+  await second.getByText(/Game tab closed or reloaded/).waitFor();await second.close();
+  const thirdPromise=page.waitForEvent('popup');await inspector.getByRole('button',{name:'Open probability dashboard'}).click();
+  const third=await thirdPromise;await third.getByRole('heading',{name:'Probability dashboard',exact:true}).waitFor();
+  assert.equal(await third.getByLabel('Prior strength · equivalent gifts').inputValue(),'100');
+  assert.equal(await third.locator('.metric strong').first().innerText(),'0');
+  assert.equal(await page.evaluate(()=>subscriptions),1);assert.equal(await page.evaluate(()=>commands),0);assert.deepEqual(errors,[]);
+  console.log(`PASS (${mode}): separate dashboard window, weighted Bayesian updates, cached/duplicate/gap handling, pool separation, multilingual search, manual trials, validation, private export, reset cursors, room changes, responsive layout and reload lifecycle.`);
+ }finally{await context?.close();await fs.rm(profile,{recursive:true,force:true});}
+}
+(async()=>{const args=process.argv.slice(2);if(args.length>1||args.length===1&&!['--all','--userscript'].includes(args[0]))throw Error('Use --all or --userscript');for(const mode of args[0]==='--all'?['extension','userscript']:[args[0]==='--userscript'?'userscript':'extension'])await run(mode);})().catch(e=>{console.error(e);process.exitCode=1;});

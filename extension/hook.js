@@ -4,9 +4,10 @@
   const normalize = window.__godfieldInspectorSchema.normalizeRoom;
   const wrapped = new WeakSet();
   let current = null;
+  let connection = 0;
   let last = { status: 'waiting-sdk', players: [] };
   function emit(state) {
-    last = { ...state, receivedAt: Date.now() };
+    last = { ...state, connectionId: current?.id ?? 0, receivedAt: Date.now() };
     try { window.postMessage({ channel: CHANNEL, type: 'state', state: last }, location.origin); } catch {}
   }
   window.addEventListener('message', event => {
@@ -23,7 +24,7 @@
       if (!/^modes\/[^/]+\/rooms\/[^/]+$/.test(args[0]?.path ?? '')) {
         return Reflect.apply(original, this, args);
       }
-      const subscription = {};
+      const subscription = {id:++connection};
       const previous = current;
       current = subscription;
       let nextIndex = args.findIndex((arg, index) => index > 0 && typeof arg === 'function');
@@ -33,7 +34,7 @@
         if (current !== subscription) return;
         try {
           if (snapshot.exists && !snapshot.exists()) emit({ status: 'missing', players: [] });
-          else emit({ ...normalize(snapshot.data()), fromCache: snapshot.metadata?.fromCache === true });
+          else emit({ ...normalize(snapshot.data()), fromCache: snapshot.metadata?.fromCache === true, pendingWrites:snapshot.metadata?.hasPendingWrites === true });
         } catch { emit({ status: 'unsupported', players: [] }); }
       }
       function onError() {

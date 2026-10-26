@@ -80,6 +80,16 @@ The first matching rule sets the name color; all matches add badges. Combine con
 
 <img src="docs/images/name-labels.png" alt="Custom name colors and translated item badges beside native player names, with the text rule editor and live preview" width="800">
 
+## Probability dashboard
+
+Open the inspector → **Odds ↗** for a separate Bayesian dashboard. It ranks next-gift probabilities using the published item weights and explicit gift events observed by your tab. Track an item to see its rate, 95% credible range, and chance of appearing at least once in the next several gifts. Opening and later gift pools stay separate; prior strength is adjustable.
+
+A **manual event calculator** estimates yes/no outcomes from a prior and success/failure counts you enter. Item names follow your selected language, and search accepts all eight translations. Counts stay in memory; dashboard settings persist. You can export aggregate estimates as JSON.
+
+These are probability estimates under a stable-distribution assumption, not seed recovery or a guaranteed next-item prediction. Cached snapshots, duplicate versions, and missing event batches do not become new draws. See the [model, collection rules, and limitations](docs/probability-dashboard.md).
+
+<img src="docs/images/probability-dashboard.png" alt="Separate Bayesian dashboard showing ranked gift probabilities, a tracked item forecast, category odds, and a manual event calculator" width="1000">
+
 ## Item languages and artwork
 
 **Auto** follows the official catalog that the game loads, including when the game removes `?lang` from the URL. Before that request completes, the extension uses the same URL/browser-language preference order as the game. Choose a language in the panel to override it for this tab:
@@ -99,15 +109,17 @@ The panel uses the game's mint/green palette and displays a three-column card gr
 - **Cached, may be stale**: Firestore supplied a cached snapshot.
 - **Save JSON**: explicitly download the currently displayed normalized snapshot. Account IDs, private room codes, and chat are excluded.
 
-All players are shown, including you. Player IDs are game-local indices; the extension deliberately does not capture account IDs to identify your row. The last snapshot remains visible after a game ends and is cleared on leaving the room. Reloading the tab clears all extension state.
+All players are shown, including you. Player IDs are game-local indices; the extension deliberately does not capture account IDs to identify your row. The last snapshot remains visible after a game ends and is cleared on leaving the room. Reloading the tab clears received game state; saved name rules and dashboard preferences persist.
 
 ## How it works
 
-`hook.js` observes the existing Firebase room listener in the page's MAIN world. `snapshot.js` copies only the required game fields. The isolated `panel.js` renders these fields in a shadow DOM panel. The extension makes no extra database requests or server writes and has no telemetry or automatic storage. The game receives its original snapshots; only supported local view objects are adjusted for visibility. Bundled catalogs supply 296 item names in eight languages without additional catalog requests. `locale-hook.js` observes successful game catalog fetches without reading response bodies or changing the returned promise. Original item images load from God Field as needed; the extension never sends inventory snapshots to another service.
+`hook.js` observes the existing Firebase room listener in the page's MAIN world. `snapshot.js` copies only the required game fields. The isolated `panel.js` renders these fields in a shadow DOM panel. The extension makes no extra database requests or server writes and has no telemetry. Rules and preferences are saved locally; received game observations are not automatically stored. The game receives its original snapshots; only supported local view objects are adjusted for visibility. Bundled catalogs supply 296 item names in eight languages without additional catalog requests. `locale-hook.js` observes successful game catalog fetches without reading response bodies or changing the returned promise. Original item images load from God Field as needed; the extension never sends inventory snapshots to another service.
 
 The userscript bundles the same source files and catalogs into one file. Its hook and shadow DOM panel both run in the page's MAIN world; the extension retains its isolated panel.
 
 `matchups.js` compares item metadata with received inventories, team assignments, MP, and recognized curses.
+
+`probability.js` collects explicit gift observations and calculates Dirichlet/Beta posteriors. `probability-dashboard.js` renders the separate dashboard window and its manual event calculator.
 
 `visibility.js` reveals known dream items in their native cards and suppresses native fog masking. It preserves received curse/item records and the game’s existing command handlers. It neither removes server-side curses nor guarantees a chosen target under fog. Unknown client view layouts are left alone.
 
@@ -134,6 +146,8 @@ npm run test:browser
 ```
 
 The browser tests load the unpacked extension into a temporary Chromium profile and delete that profile afterward. They check both JavaScript worlds, UI behavior, and exports. Screenshots are in `test-results/inspector.png` and `test-results/inspector-mobile.png`. They also check all eight languages, automatic locale changes, manual overrides, successful image loading, and broken-image fallback. Hover tests cover native player/card association, duplicate names, identical dream appearances, reordered cards, pinning, keyboard access, live updates, stale data, click passthrough, room cleanup, and narrow-screen positioning. Hover screenshots are saved alongside the panel screenshots. Matchup checks cover teams, MP changes, reusable miracles, ambiguous ownership, translated names, pinned updates, and mobile layout; screenshots use the `matchups-` prefix. Native visibility fixtures verify direct dream artwork/stats, original snapshot preservation, item clicks, fog transitions, status updates, target availability, image fallback, and unsupported view layouts. Their screenshots use the `native-visibility` prefix.
+
+Name-label fixtures verify rule editing, live native badges, saved settings, and landscape layout. Probability fixtures check counting, pool selection, Bayesian controls, translated search, export, popup lifecycle, and mobile layout; screenshots use the `probability-dashboard` prefix.
 
 Run the same browser checks against the generated userscript, or run the extension and userscript suites in sequence:
 

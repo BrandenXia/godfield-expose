@@ -47,3 +47,14 @@ test('retains only bounded public team and curse fields for matchup analysis', (
   assert.equal(players[3].team,null);
   assert.ok(!JSON.stringify(players).includes('private'));
 });
+
+test('probability observations retain only explicit bounded gift models and public timing',()=>{
+  const result=normalizeRoom({game:{players:[],updateCount:1,updatedAt:{seconds:100,nanoseconds:500000000},events:[
+    {action:'startGame',userId:'secret'}, {action:'gift',item:{modelId:112,id:42,userId:'secret'}},
+    {action:'trade',items:[{modelId:208}],name:'secret'}, {action:'gift',item:{modelId:0}}
+  ]}});
+  assert.deepEqual(result.observation,{eventsAvailable:true,truncated:false,startsGame:true,gifts:[112,0],stamp:100500});
+  assert.ok(!JSON.stringify(result).includes('secret'));
+  const huge=normalizeRoom({game:{players:[],events:Array(300).fill({action:'gift',item:{modelId:3}})}});
+  assert.equal(huge.observation.gifts.length,256);assert.equal(huge.observation.truncated,true);
+});

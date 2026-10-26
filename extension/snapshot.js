@@ -36,6 +36,16 @@
     return {
       status: data.game.isOver === true ? 'finished' : 'playing',
       updateCount: integer(data.game.updateCount),
+      observation: {
+        eventsAvailable: Array.isArray(data.game.events),
+        truncated: Array.isArray(data.game.events) && data.game.events.length > 256,
+        startsGame: Array.isArray(data.game.events) && data.game.events.slice(0, 256).some(e => e?.action === 'startGame'),
+        gifts: Array.isArray(data.game.events) ? data.game.events.slice(0, 256).filter(e => e?.action === 'gift').map(e => integer(e.item?.modelId)) : [],
+        // A public update timestamp helps distinguish a new version-1 game from
+        // a replay of the previous opening. No room or account ID crosses here.
+        stamp: Number.isSafeInteger(data.game.updatedAt?.seconds) && Number.isSafeInteger(data.game.updatedAt?.nanoseconds)
+          ? data.game.updatedAt.seconds * 1000 + data.game.updatedAt.nanoseconds / 1e6 : null
+      },
       players
     };
   }

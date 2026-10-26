@@ -3,6 +3,7 @@
   const CHANNEL = 'godfield-room-inspector-v1';
   let state = { status: 'waiting-sdk', players: [] };
   let render = () => {};
+  let probabilityDashboard = null;
   let gameLanguage = GodfieldLocalization.detectLanguage(location.search, navigator.languages);
   let languageChoice = 'auto';
   const language = () => languageChoice === 'auto' ? gameLanguage : languageChoice;
@@ -37,6 +38,7 @@
         p.name.length > 120 || !Array.isArray(p.items) || p.items.length > 64 ||
         p.items.some(i => !i || typeof i !== 'object'))) return;
     state = next;
+    probabilityDashboard?.observe(next);
     render();
   });
   window.postMessage({ channel: CHANNEL, type: 'ready' }, location.origin);
@@ -90,8 +92,9 @@
       .unknown .item-name { color: #886b38; } .used .art { opacity: .5; }
       .used-label { position: absolute; top: 4px; left: 4px; color: #886b38; background: #fff0cf; font-size: 9px; padding: 0 3px; border-radius: 3px; }
       .empty-items { grid-column: 1 / -1; padding: 12px; color: #eeffee; font-size: 12px; }
-      footer { padding: 8px 12px; background: #008f6f; color: #eeffee; display: flex; gap: 10px; align-items: center; border-top: 2px solid #eeffee; }
-      .note { color: #ddffcc; font-size: 10px; flex: 1; } .export { background: #eeffee; color: #008f6f;
+      footer { padding: 8px 12px; background: #008f6f; color: #eeffee; display: flex; flex-wrap:wrap; gap: 6px; align-items: center; border-top: 2px solid #eeffee; }
+      footer button { flex:1; }
+      .note { color: #ddffcc; font-size: 10px; flex: 1 1 100%; } .export { background: #eeffee; color: #008f6f;
         border: 1px solid #ddffcc; border-radius: 5px; padding: 4px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }
       button:disabled { opacity: .5; cursor: default; } [hidden] { display: none !important; }
       button:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #ffd567; outline-offset: -3px; }
@@ -142,7 +145,7 @@
       .name-rule-labels { margin-top:4px; }
       .name-rule-badge { display:inline-block; font-size:10px; line-height:1.5; background:#eeffee; border:1px solid currentColor; padding:0 4px; border-radius:4px; overflow-wrap:anywhere; }
       @media (max-width: 380px) { ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } h2 { font-size: 17px; } }
-      @media (max-height: 500px) { .body, .rules-editor { max-height: calc(100dvh - 190px); } }
+      @media (max-height: 500px) { .body, .rules-editor { max-height: calc(100dvh - 225px); } }
     `;
     const el = (tag, cls, text) => {
       const node = document.createElement(tag);
@@ -180,8 +183,10 @@
     const note = el('span', 'note', 'Only data received by this tab.');
     const exportButton = el('button', 'export', 'Save JSON');
     const labelsButton = el('button', 'export', 'Name labels');
+    const oddsButton = el('button', 'export', 'Odds ↗');
+    oddsButton.setAttribute('aria-label', 'Open probability dashboard');
     labelsButton.setAttribute('aria-expanded', 'false');
-    footer.append(note, labelsButton, exportButton);
+    footer.append(note, labelsButton, oddsButton, exportButton);
     panel.append(header, toolbar, body, footer);
     shadow.append(style, panel);
     document.documentElement.append(host);
@@ -248,6 +253,11 @@
       return row;
     };
     const hover = GodfieldHover.create({shadow, renderItem, getState: () => state, language});
+    probabilityDashboard = GodfieldProbabilityDashboard.create({language});
+    probabilityDashboard.observe(state);
+    oddsButton.onclick = () => {
+      if (!probabilityDashboard.open()) status.textContent = 'Allow popups for God Field, then select Odds again.';
+    };
     const nameLabels = GodfieldNameLabels.create({getState:() => state, language, onChange:() => render()});
     nameLabels.editor.hidden = true;
     panel.insertBefore(nameLabels.editor, body);
@@ -309,6 +319,7 @@
       body.scrollTop = scroll;
       hover.update();
       nameLabels.update();
+      probabilityDashboard.refresh();
       if (focusedPlayer !== undefined) {
         [...body.querySelectorAll('summary')].find(s => s.dataset.player === focusedPlayer)?.focus({ preventScroll: true });
       }

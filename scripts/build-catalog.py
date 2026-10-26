@@ -11,7 +11,7 @@ languages = ['en', 'fr', 'ja', 'ko', 'pt', 'ru', 'zh-hans', 'zh-hant']
 source = Path(sys.argv[1])
 raw = {lang: json.loads((source / f'{lang}.json').read_text()) for lang in languages}
 english = raw['en']['items']
-fields = ('imageName', 'category', 'atk', 'isPlusAtk', 'def', 'cost', 'price', 'ability', 'abilityValue', 'element', 'hitRate', 'curse')
+fields = ('imageName', 'category', 'atk', 'isPlusAtk', 'def', 'cost', 'price', 'ability', 'abilityValue', 'element', 'hitRate', 'curse', 'giftRate')
 catalog = {'models': [{k: item[k] for k in fields if k in item} for item in english], 'languages': {}}
 for lang, data in raw.items():
     assert len(data['items']) == len(english), f'{lang}: item count changed'
