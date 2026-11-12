@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         God Field Room Inspector
 // @namespace    https://github.com/BrandenXia/godfield-expose
-// @version      0.7.1
+// @version      0.7.2
 // @description  Show player items present in the room snapshots your God Field client receives.
 // @homepageURL  https://github.com/BrandenXia/godfield-expose
 // @supportURL   https://github.com/BrandenXia/godfield-expose/issues
@@ -29,6 +29,16 @@
   const own = (object, key) => object && Object.getOwnPropertyDescriptor(object, key)?.value;
   const node = value => value instanceof Element;
   const itemPrototypes = new WeakSet(), playerPrototypes = new WeakSet();
+  // Dart minification can rename methods without changing the view fields.
+  // Match a complete, verified layout; never guess individual method aliases.
+  const itemLayouts = [
+    {init:'hm', methods:['hm','gL','bH','dj']}, // November 2026 client
+    {init:'hn', methods:['hn','gL','bH','dk']}  // October 2026 client
+  ];
+  const playerLayouts = [
+    {mask:'el', methods:['el','aI','si1','fq','iS']},
+    {mask:'em', methods:['em','aI','si2','fs','iT']}
+  ];
   function methods(prototype, names) {
     return prototype && names.every(name => typeof own(prototype, name) === 'function');
   }
@@ -80,27 +90,29 @@
   function observe(view, kind) {
     try {
       const prototype = Object.getPrototypeOf(view);
-      if (kind === 'item' && methods(prototype, ['hn','gL','bH','dk'])) {
+      const itemLayout = kind === 'item' && itemLayouts.find(layout => methods(prototype, layout.methods));
+      if (itemLayout) {
         if (!itemPrototypes.has(prototype)) {
-          replace(prototype, 'hn', original => function (...args) {
+          replace(prototype, itemLayout.init, original => function (...args) {
             const result = Reflect.apply(original, this, args);
             try { revealItem(this); } catch { /* Preserve native initialization. */ }
             return result;
           });
           itemPrototypes.add(prototype);
         }
-        // The first registration occurs partway through hn(); finish it first.
+        // The first registration occurs during initialization; finish it first.
         queueMicrotask(() => { try { revealItem(view); } catch {} });
       }
-      if (kind === 'player' && methods(prototype, ['em','aI','si2','fs','iT']) &&
+      const playerLayout = kind === 'player' && playerLayouts.find(layout => methods(prototype, layout.methods));
+      if (playerLayout &&
           node(own(own(view, 'y'), 'a')) && node(own(own(view, 'z'), 'a'))) {
         if (!playerPrototypes.has(prototype)) {
-          replace(prototype, 'em', original => function () { return revealPlayer(this, original); });
+          replace(prototype, playerLayout.mask, original => function () { return revealPlayer(this, original); });
           // Keep the native Dart Future and animation lifecycle, always revealing.
           replace(prototype, 'aI', original => function () { return Reflect.apply(original, this, [false]); });
           playerPrototypes.add(prototype);
         }
-        queueMicrotask(() => { try { if (own(view, 'CW')) view.em(false); } catch {} });
+        queueMicrotask(() => { try { if (own(view, 'CW')) view[playerLayout.mask](false); } catch {} });
       }
     } catch { /* Unknown client shapes leave the native UI intact. */ }
   }

@@ -3,10 +3,16 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const os = require('node:os');
-async function run(mode) {
+// Method names from the October 20 and November 12 public Dart clients.
+const clients = {
+  legacy:{hn:'hn',dk:'dk',em:'em',si2:'si2',fs:'fs',iT:'iT'},
+  current:{hn:'hm',dk:'dj',em:'el',si2:'si1',fs:'fq',iT:'iS'}
+};
+async function run(mode, clientName) {
+  const client = clients[clientName];
   const profile = await fs.mkdtemp(path.join(os.tmpdir(),'godfield-visibility-test-'));
   const userscript = mode === 'userscript';
-  const suffix = userscript ? '-userscript' : '';
+  const suffix = `${userscript ? '-userscript' : ''}-${clientName}`;
   let context;
   try {
     const extension = path.resolve(__dirname,'../extension');
@@ -96,11 +102,11 @@ async function run(mode) {
           window.rawSnapshot={data(){return room;},metadata:{fromCache:false}};deliver(rawSnapshot);
           createCard(1,59,3,70);createCard(2,12,3,170);createCard(3,145,0,270);
           createPlayer(2,'Enemy',60);nativePlayers[0].em(true);nativePlayers[0].si2(true);
-        </script></body></html>`});
+        </script></body></html>`.replace(/\b(hn|dk|em|si2|fs|iT)\b/g, name=>client[name])});
     });
     await page.goto('https://godfield.net/?lang=en');
     const torch=page.locator('#card-1'),crossbow=page.locator('#card-2');
-    await torch.locator('[data-gfi-real-art="59"] img').waitFor();
+    await torch.locator('[data-gfi-real-art="59"] img').waitFor({timeout:5000});
     await crossbow.locator('[data-gfi-real-art="12"] img').waitFor();
     await page.waitForFunction(()=>[...document.querySelectorAll('[data-gfi-real-art] img')].every(img=>img.complete&&img.naturalWidth>0));
     assert.equal(await torch.locator('img[src$="exchange.webp"]').count(),0);
@@ -123,12 +129,12 @@ async function run(mode) {
     const future=await page.evaluate(async()=>await nativePlayers[0].aI(true));
     assert.equal(future,'native animation result');
     assert.equal(await page.evaluate(()=>nativePlayers[0].animationArgument),false);
-    await page.evaluate(()=>nativePlayers[0].fs(27));
+    await page.evaluate(client=>nativePlayers[0][client.fs](27),client);
     await page.getByText('Enemy · HP27 MP10 $20',{exact:true}).waitFor();
     // A non-selectable player does not gain a target button when fog changes.
-    await page.evaluate(()=>{nativePlayers[0].si2(false);nativePlayers[0].em(true);});
+    await page.evaluate(client=>{nativePlayers[0][client.si2](false);nativePlayers[0][client.em](true);},client);
     assert.equal(await page.getByRole('button',{name:'Target Enemy'}).count(),0);
-    await page.evaluate(()=>nativePlayers[0].si2(true));
+    await page.evaluate(client=>nativePlayers[0][client.si2](true),client);
     // Both the current view and later cards use real models, without double-wrapping.
     await page.evaluate(()=>createCard(4,59,3,370));
     await page.locator('#card-4 [data-gfi-real-art="59"]').waitFor();
@@ -154,11 +160,12 @@ async function run(mode) {
     await fs.mkdir('test-results',{recursive:true});
     await page.screenshot({path:`test-results/native-visibility${suffix}.png`});
     assert.deepEqual(errors,[]);
-    console.log(`PASS (${mode}): direct dream art/stats, original snapshot preservation, native item clicks, fog status visibility/updates, selectable targets, native animation return, unsupported views and real-name image fallback.`);
+    console.log(`PASS (${mode}, ${clientName} client): direct dream art/stats, original snapshot preservation, native item clicks, fog status visibility/updates, selectable targets, native animation return, unsupported views and real-name image fallback.`);
   } finally { await context?.close(); await fs.rm(profile,{recursive:true,force:true}); }
 }
 (async()=>{
   const arg=process.argv[2];
   if(process.argv.length>3||arg&&!['--all','--userscript'].includes(arg))throw Error('Usage: visibility-test.cjs [--all|--userscript]');
-  for(const mode of arg==='--all'?['extension','userscript']:[arg==='--userscript'?'userscript':'extension'])await run(mode);
+  for(const mode of arg==='--all'?['extension','userscript']:[arg==='--userscript'?'userscript':'extension'])
+    for(const clientName of Object.keys(clients))await run(mode,clientName);
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -84,6 +84,23 @@ The public client’s `A.jQ` command path submits `targetPlayerId`; the official
 
 Browser fixtures for both distributions verify native artwork/stats, real-name fallback, original snapshot identity and curse preservation, unchanged item clicks, repeated fog transitions, updated status text, active/inactive target buttons, and unsupported views. In an isolated live Training session, a disguise was simulated on an actual native item view and fog was requested on an actual opponent view. The real artwork/stats appeared, the opponent status stayed visible, and its existing target button could be clicked without a page error. No attack was submitted. This verifies the native presentation path, not a naturally occurring dream/fog event or the server’s target resolution. The adapter depends on the current compiled client’s view layout and method names.
 
+## Dream/fog compatibility repair (November 12, 2026)
+
+The current [compiled client](https://godfield.net/main.dart.js) has SHA-256 `5ece06c224b6a7a5d877eb45d22ea18b82a03aaf1b7161cbbdf6a1e23ceab2cd`. Its item and player view fields still match the adapter, but several method names changed:
+
+| Role | October client | November client |
+| --- | --- | --- |
+| Item initialization | `hn` | `hm` |
+| Item reveal animation | `dk` | `dj` |
+| Player fog mask | `em` | `el` |
+| Player target availability | `si2` | `si1` |
+| Player status initialization | `fs` | `fq` |
+| Player view initialization | `iT` | `iS` |
+
+The adapter required every October method name, so it silently skipped dream and fog handling on the November client. The old fixtures continued passing because they only modeled the October names. Version 0.7.2 recognizes both complete method layouts and wraps the matching initialization and fog-mask methods; the model/stat methods (`gL`, `bH`) and fog animation (`aI`) remain unchanged. Unsupported layouts still leave the native UI intact.
+
+The browser regression fixture now runs both layouts against both distributions. Before the fix, the November fixture failed to reveal the first dream card. After the fix, all four combinations pass artwork/stat, click, snapshot preservation, fog transition, status update, target availability, and animation-return checks. This repair was verified against the public client source and local browser fixtures, without joining a live match.
+
 ## Confidentiality implication
 
 In the tested private mode, both clients receive the same stored player array, including opponents' real model IDs. Keeping those items secret requires omitting them from shared participant-readable data; hiding them in the UI does not remove data already delivered to a client.
